@@ -11,7 +11,7 @@
 	<groupId>ru.mifi</groupId>
 	<artifactId>ormplatform</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>ormplatform</name>
+	<name>orm_platform</name>
 	<description>Учебная платформа для отработки ORM / Hibernate</description>
 	<url/>
 	<licenses>
