@@ -1,16 +1,16 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/orm_platform
-    username: YOUR_DB_USERNAME
-    password: YOUR_DB_PASSWORD
+    username: orm_user
+    password: orm_password
 
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: true # вывод SQL в лог
     properties:
       hibernate:
-        format_sql: true
+        format_sql: true # форматирование SQL для удобства чтения
 
 server:
   port: 8080
