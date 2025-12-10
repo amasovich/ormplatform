@@ -9,17 +9,17 @@ import ru.mifi.ormplatform.domain.entity.QuizSubmission;
 import ru.mifi.ormplatform.service.QuizService;
 import ru.mifi.ormplatform.service.QuizSubmissionService;
 import ru.mifi.ormplatform.web.dto.QuizDto;
+import ru.mifi.ormplatform.web.dto.QuizSubmissionDto;
 import ru.mifi.ormplatform.web.dto.QuizSubmissionRequestDto;
-import ru.mifi.ormplatform.web.dto.QuizSubmissionResponseDto;
-import ru.mifi.ormplatform.web.dto.QuizSummaryDto;
 import ru.mifi.ormplatform.web.mapper.QuizMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
- * REST-контроллер для работы с квизами и результатами.
+ * REST-контроллер для работы с квизами и отправкой ответов.
  */
 @RestController
 @RequestMapping("/api")
@@ -37,75 +37,132 @@ public class QuizController {
         this.quizMapper = quizMapper;
     }
 
-    // ---------------------------------------------------------
-    // 1. Списки и получение квизов
-    // ---------------------------------------------------------
-
     /**
-     * Список квизов по курсу (краткое представление).
+     * Получаю список квизов по курсу.
+     * Здесь можно использовать либо QuizDto, либо ваш уже существующий QuizSummaryDto.
      *
-     * GET /api/courses/{courseId}/quizzes
+     * @param courseId идентификатор курса
+     * @return список квизов курса
      */
     @GetMapping("/courses/{courseId}/quizzes")
-    public List<QuizSummaryDto> getQuizzesByCourse(@PathVariable Long courseId) {
+    public ResponseEntity<List<QuizDto>> getQuizzesByCourse(@PathVariable Long courseId) {
         List<Quiz> quizzes = quizService.findByCourse(courseId);
-        return quizMapper.toSummaryList(quizzes);
-    }
 
-    /**
-     * Квиз, привязанный к модулю (если он там один).
-     *
-     * GET /api/modules/{moduleId}/quiz
-     */
-    @GetMapping("/modules/{moduleId}/quiz")
-    public ResponseEntity<QuizDto> getQuizByModule(@PathVariable Long moduleId) {
-        return quizService.findByModule(moduleId)
+        List<QuizDto> result = quizzes.stream()
                 .map(quizMapper::toQuizDto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
     }
 
     /**
-     * Полный квиз по id (с вопросами и вариантами).
+     * Получаю один квиз с вопросами и вариантами ответов.
      *
-     * GET /api/quizzes/{quizId}
+     * @param quizId идентификатор квиза
+     * @return детальное описание квиза
      */
     @GetMapping("/quizzes/{quizId}")
-    public ResponseEntity<QuizDto> getQuizById(@PathVariable Long quizId) {
-        return quizService.findById(quizId)
-                .map(quizMapper::toQuizDto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<QuizDto> getQuiz(@PathVariable Long quizId) {
+        Quiz quiz = quizService.findById(quizId)
+                .orElseThrow(() -> new IllegalArgumentException("Квиз не найден: " + quizId));
+
+        return ResponseEntity.ok(quizMapper.toQuizDto(quiz));
     }
 
-    // ---------------------------------------------------------
-    // 2. Отправка и просмотр результатов
-    // ---------------------------------------------------------
-
     /**
-     * Отправить ответы на квиз и получить результат.
+     * Отправка ответов студента на квиз.
+     * Подсчёт score происходит на основе правильных вариантов в БД.
      *
-     * POST /api/quizzes/{quizId}/submissions
-     *
-     * Пример тела запроса:
-     * {
-     *   "studentId": 2,
-     *   "answers": {
-     *     "1": 1,
-     *     "2": 4
-     *   }
-     * }
+     * @param quizId  идентификатор квиза
+     * @param request ответы студента
+     * @return сохранённый результат прохождения квиза
      */
     @PostMapping("/quizzes/{quizId}/submissions")
-    public ResponseEntity<QuizSubmissionResponseDto> submitQuiz(
+    public ResponseEntity<QuizSubmissionDto> submitQuiz(
             @PathVariable Long quizId,
-            @RequestBody QuizSubmissionRequestDto request) {
-
+            @RequestBody QuizSubmissionRequestDto request
+    ) {
         Quiz quiz = quizService.findById(quizId)
-                .orElseThrow(() -> new IllegalArgumentException("Quiz not found: " + quizId));
+                .orElseThrow(() -> new IllegalArgumentException("Квиз не найден: " + quizId));
 
-        int score = calculateScore(quiz, request);
+        int score = calculateScore(quiz, request.getAnswers());
 
         QuizSubmission submission = quizSubmissionService.createSubmission(
                 quizId,
                 request.getStudentId(),
+                score,
+                LocalDateTime.now()
+        );
+
+        return ResponseEntity.ok(quizMapper.toQuizSubmissionDto(submission));
+    }
+
+    /**
+     * Список результатов по конкретному квизу.
+     *
+     * @param quizId идентификатор квиза
+     * @return список попыток прохождения этого квиза
+     */
+    @GetMapping("/quizzes/{quizId}/submissions")
+    public ResponseEntity<List<QuizSubmissionDto>> getSubmissionsByQuiz(@PathVariable Long quizId) {
+        List<QuizSubmission> submissions = quizSubmissionService.findByQuiz(quizId);
+
+        List<QuizSubmissionDto> result = submissions.stream()
+                .map(quizMapper::toQuizSubmissionDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Все результаты квизов для конкретного студента.
+     *
+     * @param studentId идентификатор студента
+     * @return список всех попыток студента по квизам
+     */
+    @GetMapping("/students/{studentId}/quiz-submissions")
+    public ResponseEntity<List<QuizSubmissionDto>> getSubmissionsByStudent(@PathVariable Long studentId) {
+        List<QuizSubmission> submissions = quizSubmissionService.findByStudent(studentId);
+
+        List<QuizSubmissionDto> result = submissions.stream()
+                .map(quizMapper::toQuizSubmissionDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Подсчёт количества правильных ответов.
+     *
+     * @param quiz    квиз с вопросами и вариантами
+     * @param answers карта "id вопроса → id выбранного варианта"
+     * @return количество правильных ответов
+     */
+    private int calculateScore(Quiz quiz, Map<Long, Long> answers) {
+        if (quiz.getQuestions() == null || answers == null || answers.isEmpty()) {
+            return 0;
+        }
+
+        int score = 0;
+
+        for (Question question : quiz.getQuestions()) {
+            Long selectedOptionId = answers.get(question.getId());
+            if (selectedOptionId == null) {
+                continue;
+            }
+
+            if (question.getOptions() == null) {
+                continue;
+            }
+
+            for (AnswerOption option : question.getOptions()) {
+                if (option.getId().equals(selectedOptionId) && option.isCorrect()) {
+                    score++;
+                    break;
+                }
+            }
+        }
+
+        return score;
+    }
+}
