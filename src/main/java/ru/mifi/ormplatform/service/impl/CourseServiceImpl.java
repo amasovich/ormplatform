@@ -84,12 +84,6 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Course> findById(Long id) {
-        return courseRepository.findById(id);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<Course> findByCategory(Long categoryId) {
         return courseRepository.findAllByCategory_Id(categoryId);
     }
@@ -108,8 +102,22 @@ public class CourseServiceImpl implements CourseService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Course> findAll() {
+    public List<Course> findAllCourses() {
         return courseRepository.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Course> findById(Long id) {
+        return courseRepository.findById(id);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Course getByIdOrThrow(Long id) {
+        return courseRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Курс с id=" + id + " не найден"));
     }
 }
 

@@ -40,14 +40,6 @@ public interface CourseService {
     Course addTagToCourse(Long courseId, Long tagId);
 
     /**
-     * Получаю курс по идентификатору.
-     *
-     * @param id идентификатор курса.
-     * @return Optional с курсом, если найден.
-     */
-    Optional<Course> findById(Long id);
-
-    /**
      * Курсы по категории.
      *
      * @param categoryId идентификатор категории.
@@ -72,10 +64,28 @@ public interface CourseService {
     List<Course> searchByTitle(String titlePart);
 
     /**
-     * Список всех курсов.
+     * Возвращаю все курсы в системе.
      *
      * @return список курсов.
      */
-    List<Course> findAll();
+    List<Course> findAllCourses();
+
+    /**
+     * Получаю курс по идентификатору.
+     *
+     * @param id идентификатор курса.
+     * @return Optional с курсом, если найден.
+     */
+    Optional<Course> findById(Long id);
+
+    /**
+     * Получаю курс по идентификатору или бросаю IllegalArgumentException,
+     * если курс не найден. Этот метод удобно использовать в REST-слое.
+     *
+     * @param id идентификатор курса.
+     * @return найденный курс.
+     */
+    Course getByIdOrThrow(Long id);
+
 }
 
