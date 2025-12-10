@@ -5,10 +5,7 @@ import ru.mifi.ormplatform.domain.entity.AnswerOption;
 import ru.mifi.ormplatform.domain.entity.Question;
 import ru.mifi.ormplatform.domain.entity.Quiz;
 import ru.mifi.ormplatform.domain.entity.QuizSubmission;
-import ru.mifi.ormplatform.web.dto.AnswerOptionDto;
-import ru.mifi.ormplatform.web.dto.QuestionDto;
-import ru.mifi.ormplatform.web.dto.QuizDto;
-import ru.mifi.ormplatform.web.dto.QuizSubmissionDto;
+import ru.mifi.ormplatform.web.dto.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -126,4 +123,28 @@ public class QuizMapper {
 
         return dto;
     }
+
+    public QuizSummaryDto toSummaryDto(Quiz quiz) {
+        if (quiz == null) {
+            return null;
+        }
+        QuizSummaryDto dto = new QuizSummaryDto();
+        dto.setId(quiz.getId());
+        dto.setTitle(quiz.getTitle());
+        dto.setTimeLimit(quiz.getTimeLimit());
+        dto.setCourseId(
+                quiz.getCourse() != null ? quiz.getCourse().getId() : null
+        );
+        dto.setModuleId(
+                quiz.getModule() != null ? quiz.getModule().getId() : null
+        );
+        return dto;
+    }
+
+    public List<QuizSummaryDto> toSummaryDtoList(List<Quiz> quizzes) {
+        return quizzes.stream()
+                .map(this::toSummaryDto)
+                .toList();
+    }
+
 }

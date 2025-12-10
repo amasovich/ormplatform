@@ -11,6 +11,7 @@ import ru.mifi.ormplatform.service.QuizSubmissionService;
 import ru.mifi.ormplatform.web.dto.QuizDto;
 import ru.mifi.ormplatform.web.dto.QuizSubmissionDto;
 import ru.mifi.ormplatform.web.dto.QuizSubmissionRequestDto;
+import ru.mifi.ormplatform.web.dto.QuizSummaryDto;
 import ru.mifi.ormplatform.web.mapper.QuizMapper;
 
 import java.time.LocalDateTime;
@@ -54,6 +55,13 @@ public class QuizController {
 
         return ResponseEntity.ok(result);
     }
+
+//    @GetMapping("/courses/{courseId}/quizzes")
+//    public List<QuizSummaryDto> getQuizzesForCourse(@PathVariable Long courseId) {
+//        List<Quiz> quizzes = quizService.getQuizzesByCourse(courseId);
+//        return quizMapper.toSummaryDtoList(quizzes);
+//    }
+
 
     /**
      * Получаю один квиз с вопросами и вариантами ответов.
