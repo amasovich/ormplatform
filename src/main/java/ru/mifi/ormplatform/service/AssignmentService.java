@@ -22,6 +22,12 @@ public interface AssignmentService {
 
     Optional<Assignment> findById(Long id);
 
+    /**
+     * Возвращаю все задания для указанного урока.
+     *
+     * @param lessonId идентификатор урока.
+     * @return список заданий.
+     */
     List<Assignment> findByLesson(Long lessonId);
 }
 
