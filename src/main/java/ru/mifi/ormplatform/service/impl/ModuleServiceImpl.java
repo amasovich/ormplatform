@@ -84,4 +84,38 @@ public class ModuleServiceImpl implements ModuleService {
     public List<Module> findByCourse(Long courseId) {
         return moduleRepository.findAllByCourse_IdOrderByOrderIndexAsc(courseId);
     }
+
+    @Override
+    public Module updateModule(Long id,
+                               String title,
+                               Integer orderIndex,
+                               String description) {
+
+        Module module = moduleRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Модуль с id=" + id + " не найден"));
+
+        if (title != null) {
+            module.setTitle(title.trim());
+        }
+
+        if (description != null) {
+            module.setDescription(description.trim());
+        }
+
+        if (orderIndex != null) {
+            module.setOrderIndex(orderIndex);
+        }
+
+        return moduleRepository.save(module);
+    }
+
+    @Override
+    public void deleteModule(Long id) {
+        if (!moduleRepository.existsById(id)) {
+            throw new IllegalArgumentException("Модуль не найден: id=" + id);
+        }
+        moduleRepository.deleteById(id);
+    }
+
 }

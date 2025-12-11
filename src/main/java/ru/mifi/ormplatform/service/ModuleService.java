@@ -40,5 +40,10 @@ public interface ModuleService {
      * @return список модулей.
      */
     List<Module> findByCourse(Long courseId);
+
+    Module updateModule(Long id, String title, Integer orderIndex, String description);
+
+    void deleteModule(Long id);
+
 }
 

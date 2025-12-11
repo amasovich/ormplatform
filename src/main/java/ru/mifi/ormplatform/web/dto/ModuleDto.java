@@ -3,19 +3,18 @@ package ru.mifi.ormplatform.web.dto;
 import java.util.List;
 
 /**
- * DTO для модуля курса.
- * Включает базовые поля модуля и список уроков.
+ * DTO модуля курса.
+ * Используется в деталях курса и в ModuleController.
  */
 public class ModuleDto {
 
     private Long id;
     private String title;
-    private Integer orderIndex;
     private String description;
+    private Integer orderIndex;
     private List<LessonDto> lessons;
 
     public ModuleDto() {
-        // пустой конструктор для сериализации
     }
 
     public Long getId() {
@@ -34,20 +33,20 @@ public class ModuleDto {
         this.title = title;
     }
 
-    public Integer getOrderIndex() {
-        return orderIndex;
-    }
-
-    public void setOrderIndex(Integer orderIndex) {
-        this.orderIndex = orderIndex;
-    }
-
     public String getDescription() {
         return description;
     }
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Integer getOrderIndex() {
+        return orderIndex;
+    }
+
+    public void setOrderIndex(Integer orderIndex) {
+        this.orderIndex = orderIndex;
     }
 
     public List<LessonDto> getLessons() {
@@ -58,4 +57,3 @@ public class ModuleDto {
         this.lessons = lessons;
     }
 }
-
