@@ -5,28 +5,26 @@ import ru.mifi.ormplatform.domain.entity.Category;
 import ru.mifi.ormplatform.web.dto.CategoryDto;
 
 /**
- * Маппер между Category и CategoryDto.
+ * Маппер для преобразования сущности {@link Category} в DTO {@link CategoryDto}.
+ * <p>
+ * Категории — простой справочник, поэтому маппер оставляет только безопасные поля.
  */
 @Component
 public class CategoryMapper {
 
     /**
-     * Преобразование сущности Category в DTO.
+     * Преобразует сущность {@link Category} в DTO.
+     *
+     * @param category JPA-сущность категории (может быть null)
+     * @return DTO или null
      */
     public CategoryDto toDto(Category category) {
+        if (category == null) return null;
+
         CategoryDto dto = new CategoryDto();
         dto.setId(category.getId());
         dto.setName(category.getName());
-        return dto;
-    }
 
-    /**
-     * Преобразование DTO в сущность Category.
-     * Используется для создания и обновления.
-     */
-    public Category toEntity(CategoryDto dto) {
-        Category category = new Category();
-        category.setName(dto.getName());
-        return category;
+        return dto;
     }
 }

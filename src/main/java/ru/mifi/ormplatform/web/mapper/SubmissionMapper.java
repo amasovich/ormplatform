@@ -6,37 +6,42 @@ import ru.mifi.ormplatform.web.dto.SubmissionDto;
 
 /**
  * Маппер для преобразования сущности {@link Submission}
- * в транспортный объект {@link SubmissionDto}.
- *
+ * в DTO-модель {@link SubmissionDto}.
  * <p>
- * Вынесен в отдельный класс, чтобы разделить ответственность
- * между логикой заданий (AssignmentMapper) и логикой отправок решений.
+ * Используется контроллерами и сервисами для передачи данных о
+ * сдаче практических заданий без утечки JPA-сущностей в REST-слой.
  */
 @Component
 public class SubmissionMapper {
 
     /**
-     * Преобразую отправку задания (Submission) в DTO.
+     * Конвертирует JPA-сущность {@link Submission} в DTO {@link SubmissionDto}.
+     * <p>
+     * Метод безопасен для null — при передаче null возвращает null,
+     * предотвращая возможные NullPointerException в контроллерах.
      *
-     * @param submission исходная JPA-сущность отправки.
-     * @return DTO для REST-слоя.
+     * @param submission сущность отправленного решения.
+     * @return DTO-представление отправки или null.
      */
     public SubmissionDto toDto(Submission submission) {
-        SubmissionDto dto = new SubmissionDto();
+        if (submission == null) {
+            return null;
+        }
 
+        SubmissionDto dto = new SubmissionDto();
         dto.setId(submission.getId());
         dto.setSubmittedAt(submission.getSubmittedAt());
         dto.setContent(submission.getContent());
         dto.setScore(submission.getScore());
         dto.setFeedback(submission.getFeedback());
 
-        // --- Assignment ---
+        // --- Assignment section ---
         if (submission.getAssignment() != null) {
             dto.setAssignmentId(submission.getAssignment().getId());
             dto.setAssignmentTitle(submission.getAssignment().getTitle());
         }
 
-        // --- Student ---
+        // --- Student section ---
         if (submission.getStudent() != null) {
             dto.setStudentId(submission.getStudent().getId());
             dto.setStudentName(submission.getStudent().getName());
