@@ -1,33 +1,15 @@
 package ru.mifi.ormplatform.web.dto;
 
 /**
- * DTO для вывода урока наружу.
+ * DTO для обновления урока.
  */
-public class LessonDto {
+public class LessonUpdateRequestDto {
 
-    private Long id;
-    private Long moduleId;
     private String title;
     private String content;
     private String videoUrl;
 
-    public LessonDto() {}
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getModuleId() {
-        return moduleId;
-    }
-
-    public void setModuleId(Long moduleId) {
-        this.moduleId = moduleId;
-    }
+    public LessonUpdateRequestDto() {}
 
     public String getTitle() {
         return title;

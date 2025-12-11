@@ -60,6 +60,32 @@ public class LessonServiceImpl implements LessonService {
     }
 
     @Override
+    public Lesson updateLesson(Long id,
+                               String title,
+                               String content,
+                               String videoUrl) {
+
+        Lesson lesson = lessonRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Урок с id=" + id + " не найден"));
+
+        if (title != null) lesson.setTitle(title.trim());
+        if (content != null) lesson.setContent(content.trim());
+        lesson.setVideoUrl(videoUrl);
+
+        return lessonRepository.save(lesson);
+    }
+
+    @Override
+    public void deleteLesson(Long id) {
+        Lesson lesson = lessonRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Урок с id=" + id + " не найден"));
+
+        lessonRepository.delete(lesson);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<Lesson> findById(Long id) {
         return lessonRepository.findById(id);

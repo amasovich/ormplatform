@@ -25,6 +25,19 @@ public interface LessonService {
                         String videoUrl);
 
     /**
+     * Обновляю урок.
+     */
+    Lesson updateLesson(Long id,
+                        String title,
+                        String content,
+                        String videoUrl);
+
+    /**
+     * Удаляю урок по id.
+     */
+    void deleteLesson(Long id);
+
+    /**
      * Получаю урок по идентификатору.
      */
     Optional<Lesson> findById(Long id);
