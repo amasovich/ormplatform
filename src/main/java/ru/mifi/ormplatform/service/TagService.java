@@ -40,5 +40,10 @@ public interface TagService {
      * @return список тегов.
      */
     List<Tag> findAll();
+
+    Tag updateTag(Long id, String newName);
+
+    void deleteTag(Long id);
+
 }
 
