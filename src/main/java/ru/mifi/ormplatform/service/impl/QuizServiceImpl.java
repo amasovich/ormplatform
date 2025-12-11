@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.Course;
@@ -14,7 +16,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Реализация сервиса для работы с квизами (тестами) по модулям курса.
+ * Реализация сервиса работы с квизами.
+ * Содержит проверку принадлежности модуля курсу,
+ * нормализацию данных и корректную обработку ошибок.
  */
 @Service
 @Transactional
@@ -32,30 +36,38 @@ public class QuizServiceImpl implements QuizService {
         this.moduleRepository = moduleRepository;
     }
 
+    // ============================================================================
+    //                               CREATE
+    // ============================================================================
+
     @Override
     public Quiz createQuiz(Long courseId,
                            Long moduleId,
                            String title,
                            Integer timeLimitMinutes) {
 
+        if (title == null || title.isBlank()) {
+            throw new ValidationException("Quiz title cannot be empty");
+        }
+
         Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Курс с id=" + courseId + " не найден"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Course not found: id=" + courseId));
 
         Module module = moduleRepository.findById(moduleId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Модуль с id=" + moduleId + " не найден"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Module not found: id=" + moduleId));
 
         // Проверяем, что модуль принадлежит курсу
         if (!module.getCourse().getId().equals(courseId)) {
-            throw new IllegalArgumentException(
-                    "Модуль id=" + moduleId + " не принадлежит курсу id=" + courseId);
+            throw new ValidationException(
+                    "Module id=" + moduleId + " does not belong to course id=" + courseId);
         }
 
-        // Проверяем, что у модуля нет существующего квиза
+        // Проверяем отсутствие уже существующего квиза
         if (quizRepository.findByModule_Id(moduleId).isPresent()) {
-            throw new IllegalStateException(
-                    "Квиз для модуля id=" + moduleId + " уже существует");
+            throw new ValidationException(
+                    "Quiz for module id=" + moduleId + " already exists");
         }
 
         Quiz quiz = new Quiz();
@@ -65,6 +77,10 @@ public class QuizServiceImpl implements QuizService {
 
         return quizRepository.save(quiz);
     }
+
+    // ============================================================================
+    //                             READ METHODS
+    // ============================================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -81,34 +97,57 @@ public class QuizServiceImpl implements QuizService {
     @Override
     @Transactional(readOnly = true)
     public List<Quiz> findByCourse(Long courseId) {
-        // 🔥 корректный способ — через модули
+
+        // Получаем модули
         List<Module> modules =
                 moduleRepository.findAllByCourse_IdOrderByOrderIndexAsc(courseId);
 
+        // Преобразуем в список квизов
         return modules.stream()
-                .map(module -> quizRepository.findByModule_Id(module.getId()))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
+                .map(m -> quizRepository.findByModule_Id(m.getId()))
+                .flatMap(Optional::stream)
                 .toList();
     }
 
-    @Override
-    public Quiz updateQuiz(Long id, String title, Integer timeLimitMinutes) {
-        Quiz quiz = quizRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Квиз с id=" + id + " не найден"));
+    // ============================================================================
+    //                               UPDATE
+    // ============================================================================
 
-        quiz.setTitle(title);
-        quiz.setTimeLimit(timeLimitMinutes);
+    @Override
+    public Quiz updateQuiz(Long id,
+                           String title,
+                           Integer timeLimitMinutes) {
+
+        Quiz quiz = quizRepository.findById(id)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Quiz not found: id=" + id));
+
+        if (title != null) {
+            String normalized = title.trim();
+            if (normalized.isEmpty()) {
+                throw new ValidationException("Quiz title cannot be empty");
+            }
+            quiz.setTitle(normalized);
+        }
+
+        if (timeLimitMinutes != null) {
+            quiz.setTimeLimit(timeLimitMinutes);
+        }
 
         return quizRepository.save(quiz);
     }
 
+    // ============================================================================
+    //                               DELETE
+    // ============================================================================
+
     @Override
     public void deleteQuiz(Long id) {
-        if (!quizRepository.existsById(id)) {
-            throw new IllegalArgumentException("Квиз с id=" + id + " не найден");
-        }
-        quizRepository.deleteById(id);
-    }
 
+        Quiz quiz = quizRepository.findById(id)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Quiz not found: id=" + id));
+
+        quizRepository.delete(quiz);
+    }
 }

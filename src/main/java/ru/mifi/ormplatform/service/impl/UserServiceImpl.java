@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.User;
@@ -12,6 +14,7 @@ import java.util.Optional;
 
 /**
  * Реализация сервиса пользователей.
+ * Содержит валидацию, проверки уникальности и стандартную обработку ошибок.
  */
 @Service
 @Transactional
@@ -23,34 +26,45 @@ public class UserServiceImpl implements UserService {
         this.userRepository = userRepository;
     }
 
+    // ===========================================================
+    //                        CREATE USER
+    // ===========================================================
+
     @Override
     public User createUser(String name, String email, UserRole role) {
 
-        // Проверка входных данных
+        // -----------------------------
+        // ВАЛИДАЦИЯ ВХОДНЫХ ДАННЫХ
+        // -----------------------------
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Имя пользователя не может быть пустым");
+            throw new ValidationException("User name cannot be empty");
         }
         if (email == null || email.trim().isEmpty()) {
-            throw new IllegalArgumentException("Email не может быть пустым");
+            throw new ValidationException("Email cannot be empty");
         }
         if (!email.contains("@")) {
-            throw new IllegalArgumentException("Некорректный email: " + email);
+            throw new ValidationException("Invalid email format: " + email);
         }
         if (role == null) {
-            throw new IllegalArgumentException("Роль пользователя не может быть null");
+            throw new ValidationException("User role cannot be null");
         }
 
-        // Нормализация данных
+        // Нормализация
         String normalizedName = name.trim();
         String normalizedEmail = email.trim().toLowerCase();
 
-        // Проверка уникальности email
+        // -----------------------------
+        // ПРОВЕРКА УНИКАЛЬНОСТИ EMAIL
+        // -----------------------------
         if (userRepository.findByEmail(normalizedEmail).isPresent()) {
-            throw new IllegalStateException(
-                    "Пользователь с email=" + normalizedEmail + " уже существует");
+            throw new ValidationException(
+                    "User with email '" + normalizedEmail + "' already exists"
+            );
         }
 
-        // Создание пользователя
+        // -----------------------------
+        // СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
+        // -----------------------------
         User user = new User();
         user.setName(normalizedName);
         user.setEmail(normalizedEmail);
@@ -58,6 +72,10 @@ public class UserServiceImpl implements UserService {
 
         return userRepository.save(user);
     }
+
+    // ===========================================================
+    //                        FIND USER
+    // ===========================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -68,13 +86,16 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Optional<User> findByEmail(String email) {
-        if (email == null) return Optional.empty();
+        if (email == null || email.isBlank()) return Optional.empty();
         return userRepository.findByEmail(email.trim().toLowerCase());
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<User> findByRole(UserRole role) {
+        if (role == null) {
+            throw new ValidationException("Role cannot be null");
+        }
         return userRepository.findAllByRole(role);
     }
 
@@ -82,5 +103,18 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public List<User> findAll() {
         return userRepository.findAll();
+    }
+
+    // ===========================================================
+    //         ВСПОМОГАТЕЛЬНЫЙ МЕТОД ДЛЯ КОНТРОЛЛЕРОВ
+    // ===========================================================
+
+    /**
+     * Унифицированный метод для ситуаций, когда пользователь должен существовать.
+     */
+    public User getByIdOrThrow(Long id) {
+        return findById(id).orElseThrow(
+                () -> new EntityNotFoundException("User not found: id=" + id)
+        );
     }
 }

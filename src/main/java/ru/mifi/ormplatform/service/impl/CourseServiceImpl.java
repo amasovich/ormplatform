@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.Category;
@@ -19,6 +21,8 @@ import java.util.Optional;
 
 /**
  * Реализация сервиса курсов.
+ * Содержит строгую валидацию, проверку ролей, нормализацию и корректное
+ * использование исключений (ValidationException, EntityNotFoundException).
  */
 @Service
 @Transactional
@@ -39,6 +43,10 @@ public class CourseServiceImpl implements CourseService {
         this.tagRepository = tagRepository;
     }
 
+    // ============================================================================
+    //                               CREATE COURSE
+    // ============================================================================
+
     @Override
     public Course createCourse(String title,
                                String description,
@@ -47,52 +55,82 @@ public class CourseServiceImpl implements CourseService {
                                Integer duration,
                                LocalDate startDate) {
 
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Category with id=" + categoryId + " not found"));
-
-        User teacher = userRepository.findById(teacherId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Teacher with id=" + teacherId + " not found"));
-
-        if (teacher.getRole() != UserRole.TEACHER) {
-            throw new IllegalArgumentException(
-                    "User with id=" + teacherId + " is not a TEACHER");
+        // -------- Валидация входных данных --------
+        if (title == null || title.trim().isEmpty()) {
+            throw new ValidationException("Course title cannot be empty");
+        }
+        if (description == null || description.trim().isEmpty()) {
+            throw new ValidationException("Course description cannot be empty");
+        }
+        if (categoryId == null) {
+            throw new ValidationException("categoryId is required");
+        }
+        if (teacherId == null) {
+            throw new ValidationException("teacherId is required");
+        }
+        if (duration == null || duration <= 0) {
+            throw new ValidationException("duration must be a positive integer");
         }
 
+        // -------- Загрузка категории --------
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Category not found: id=" + categoryId));
+
+        // -------- Загрузка и проверка преподавателя --------
+        User teacher = userRepository.findById(teacherId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("User not found: id=" + teacherId));
+
+        if (teacher.getRole() != UserRole.TEACHER) {
+            throw new ValidationException("Only TEACHER can be assigned to a course");
+        }
+
+        // -------- Нормализация --------
+        String normalizedTitle = title.trim();
+        String normalizedDescription = description.trim();
+
+        // -------- Создание курса --------
         Course course = new Course();
-        course.setTitle(title);
-        course.setDescription(description);
+        course.setTitle(normalizedTitle);
+        course.setDescription(normalizedDescription);
         course.setCategory(category);
         course.setTeacher(teacher);
-
-        // теперь duration — Integer
         course.setDuration(duration);
         course.setStartDate(startDate);
 
         return courseRepository.save(course);
     }
 
+    // ============================================================================
+    //                             ADD TAG TO COURSE
+    // ============================================================================
+
     @Override
     public Course addTagToCourse(Long courseId, Long tagId) {
+
         Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Course with id=" + courseId + " not found"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Course not found: id=" + courseId));
 
         Tag tag = tagRepository.findById(tagId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Tag with id=" + tagId + " not found"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Tag not found: id=" + tagId));
 
+        // уже привязан — ничего не делаем
         if (course.getTags().contains(tag)) {
             return course;
         }
 
         course.getTags().add(tag);
-        // При необходимости можно добавить bidirectional-связь:
-        tag.getCourses().add(course);
+        tag.getCourses().add(course); // поддерживаем bidirectional, если нужно
 
         return courseRepository.save(course);
     }
+
+    // ============================================================================
+    //                                   READ
+    // ============================================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -128,9 +166,13 @@ public class CourseServiceImpl implements CourseService {
     @Transactional(readOnly = true)
     public Course getByIdOrThrow(Long id) {
         return courseRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Курс с id=" + id + " не найден"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Course not found: id=" + id));
     }
+
+    // ============================================================================
+    //                                   SAVE / DELETE
+    // ============================================================================
 
     @Override
     public Course save(Course course) {
@@ -140,11 +182,9 @@ public class CourseServiceImpl implements CourseService {
     @Override
     public void delete(Long id) {
         Course course = courseRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Курс с id=" + id + " не найден"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Course not found: id=" + id));
 
         courseRepository.delete(course);
     }
-
 }
-

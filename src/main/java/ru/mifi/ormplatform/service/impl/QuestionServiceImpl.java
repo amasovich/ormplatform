@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.AnswerOption;
@@ -13,6 +15,11 @@ import ru.mifi.ormplatform.service.QuestionService;
 
 import java.util.List;
 
+/**
+ * Реализация сервиса вопросов и вариантов ответа.
+ * Выполняет валидацию типов вопросов, предотвращает некорректные комбинации
+ * и обеспечивает целостность данных квиза.
+ */
 @Service
 @Transactional
 public class QuestionServiceImpl implements QuestionService {
@@ -29,17 +36,22 @@ public class QuestionServiceImpl implements QuestionService {
         this.quizRepository = quizRepository;
     }
 
-    // -------------------------------------------------------------------------
-    // CREATE
-    // -------------------------------------------------------------------------
+    // ============================================================================
+    // CREATE QUESTION
+    // ============================================================================
     @Override
     public Question createQuestion(Long quizId, String text, QuestionType type) {
-        if (text == null || text.trim().isEmpty()) {
-            throw new IllegalArgumentException("Текст вопроса не может быть пустым");
+
+        if (text == null || text.isBlank()) {
+            throw new ValidationException("Question text cannot be empty");
+        }
+        if (type == null) {
+            throw new ValidationException("Question type cannot be null");
         }
 
         Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new IllegalArgumentException("Квиз не найден: " + quizId));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Quiz not found: id=" + quizId));
 
         Question question = new Question();
         question.setQuiz(quiz);
@@ -49,24 +61,49 @@ public class QuestionServiceImpl implements QuestionService {
         return questionRepository.save(question);
     }
 
-    // -------------------------------------------------------------------------
+    // ============================================================================
     // UPDATE QUESTION
-    // -------------------------------------------------------------------------
+    // ============================================================================
     @Override
-    public Question updateQuestion(Long questionId, String newText, QuestionType newType) {
-        Question question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new IllegalArgumentException("Вопрос не найден: " + questionId));
+    public Question updateQuestion(Long questionId,
+                                   String newText,
+                                   QuestionType newType) {
 
-        if (newText != null && !newText.trim().isEmpty()) {
-            question.setText(newText.trim());
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Question not found: id=" + questionId));
+
+        // обновление текста
+        if (newText != null) {
+            String normalized = newText.trim();
+            if (normalized.isEmpty()) {
+                throw new ValidationException("Question text cannot be empty");
+            }
+            question.setText(normalized);
         }
 
-        if (newType != null && question.getType() != newType) {
+        // смена типа
+        if (newType != null && newType != question.getType()) {
 
-            // запрещаем смену типа на TEXT, если у вопроса сейчас есть варианты
-            if (newType == QuestionType.TEXT &&
-                    !answerOptionRepository.findAllByQuestion_Id(questionId).isEmpty()) {
-                throw new IllegalStateException("Нельзя сменить вопрос на TEXT — у него есть варианты");
+            List<AnswerOption> existingOptions =
+                    answerOptionRepository.findAllByQuestion_Id(questionId);
+
+            // TEXT-вопросы не могут иметь варианты
+            if (newType == QuestionType.TEXT && !existingOptions.isEmpty()) {
+                throw new ValidationException(
+                        "Cannot change question to TEXT: it already contains answer options");
+            }
+
+            // SINGLE_CHOICE → нельзя назначить >1 правильного
+            if (newType == QuestionType.SINGLE_CHOICE) {
+                long correctCount = existingOptions.stream()
+                        .filter(AnswerOption::isCorrect)
+                        .count();
+
+                if (correctCount > 1) {
+                    throw new ValidationException(
+                            "Cannot change to SINGLE_CHOICE: question already has multiple correct answers");
+                }
             }
 
             question.setType(newType);
@@ -75,45 +112,56 @@ public class QuestionServiceImpl implements QuestionService {
         return questionRepository.save(question);
     }
 
-    // -------------------------------------------------------------------------
+    // ============================================================================
     // DELETE QUESTION
-    // -------------------------------------------------------------------------
+    // ============================================================================
     @Override
     public void deleteQuestion(Long questionId) {
-        Question question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new IllegalArgumentException("Вопрос не найден: " + questionId));
 
-        // сначала удаляем все варианты ответа
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Question not found: id=" + questionId));
+
+        // удаляем варианты ответа
         List<AnswerOption> options = answerOptionRepository.findAllByQuestion_Id(questionId);
         answerOptionRepository.deleteAll(options);
 
         questionRepository.delete(question);
     }
 
-    // -------------------------------------------------------------------------
+    // ============================================================================
     // ADD ANSWER OPTION
-    // -------------------------------------------------------------------------
+    // ============================================================================
     @Override
-    public AnswerOption addAnswerOption(Long questionId, String text, boolean isCorrect) {
-        if (text == null || text.trim().isEmpty()) {
-            throw new IllegalArgumentException("Текст варианта не может быть пустым");
+    public AnswerOption addAnswerOption(Long questionId,
+                                        String text,
+                                        boolean isCorrect) {
+
+        if (text == null || text.isBlank()) {
+            throw new ValidationException("Answer option text cannot be empty");
         }
 
         Question question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new IllegalArgumentException("Вопрос не найден: " + questionId));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Question not found: id=" + questionId));
 
+        // TEXT-вопросы не имеют вариантов
         if (question.getType() == QuestionType.TEXT) {
-            throw new IllegalStateException("TEXT-вопрос не может иметь варианты ответа");
+            throw new ValidationException(
+                    "Cannot add answer options to TEXT question");
         }
 
-        // единственный правильный ответ для SINGLE_CHOICE
+        // SINGLE_CHOICE может иметь только 1 правильный
         if (question.getType() == QuestionType.SINGLE_CHOICE && isCorrect) {
-            boolean alreadyHasCorrect = answerOptionRepository.findAllByQuestion_Id(questionId)
-                    .stream()
-                    .anyMatch(AnswerOption::isCorrect);
+
+            boolean alreadyHasCorrect =
+                    answerOptionRepository.findAllByQuestion_Id(questionId)
+                            .stream()
+                            .anyMatch(AnswerOption::isCorrect);
 
             if (alreadyHasCorrect) {
-                throw new IllegalStateException("SINGLE_CHOICE может иметь только один правильный вариант");
+                throw new ValidationException(
+                        "SINGLE_CHOICE question already has a correct option");
             }
         }
 
@@ -125,28 +173,38 @@ public class QuestionServiceImpl implements QuestionService {
         return answerOptionRepository.save(option);
     }
 
-    // -------------------------------------------------------------------------
+    // ============================================================================
     // UPDATE ANSWER OPTION
-    // -------------------------------------------------------------------------
+    // ============================================================================
     @Override
-    public AnswerOption updateAnswerOption(Long optionId, String text, boolean isCorrect) {
-        AnswerOption option = answerOptionRepository.findById(optionId)
-                .orElseThrow(() -> new IllegalArgumentException("Вариант ответа не найден: " + optionId));
+    public AnswerOption updateAnswerOption(Long optionId,
+                                           String text,
+                                           boolean isCorrect) {
 
-        if (text != null && !text.trim().isEmpty()) {
-            option.setText(text.trim());
+        AnswerOption option = answerOptionRepository.findById(optionId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Answer option not found: id=" + optionId));
+
+        if (text != null) {
+            String normalized = text.trim();
+            if (normalized.isEmpty()) {
+                throw new ValidationException("Answer option text cannot be empty");
+            }
+            option.setText(normalized);
         }
 
         Question question = option.getQuestion();
 
-        // проверяем корректность для SINGLE_CHOICE
+        // SINGLE_CHOICE → только один корректный
         if (question.getType() == QuestionType.SINGLE_CHOICE && isCorrect) {
-            boolean anotherCorrect = answerOptionRepository.findAllByQuestion_Id(question.getId())
-                    .stream()
-                    .anyMatch(o -> o.isCorrect() && !o.getId().equals(optionId));
+            boolean existsOtherCorrect =
+                    answerOptionRepository.findAllByQuestion_Id(question.getId())
+                            .stream()
+                            .anyMatch(o -> o.isCorrect() && !o.getId().equals(optionId));
 
-            if (anotherCorrect) {
-                throw new IllegalStateException("SINGLE_CHOICE может иметь только один правильный вариант");
+            if (existsOtherCorrect) {
+                throw new ValidationException(
+                        "SINGLE_CHOICE question cannot have more than one correct option");
             }
         }
 
@@ -155,20 +213,22 @@ public class QuestionServiceImpl implements QuestionService {
         return answerOptionRepository.save(option);
     }
 
-    // -------------------------------------------------------------------------
+    // ============================================================================
     // DELETE ANSWER OPTION
-    // -------------------------------------------------------------------------
+    // ============================================================================
     @Override
     public void deleteAnswerOption(Long optionId) {
+
         AnswerOption option = answerOptionRepository.findById(optionId)
-                .orElseThrow(() -> new IllegalArgumentException("Вариант ответа не найден: " + optionId));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Answer option not found: id=" + optionId));
 
         answerOptionRepository.delete(option);
     }
 
-    // -------------------------------------------------------------------------
+    // ============================================================================
     // FIND QUESTIONS BY QUIZ
-    // -------------------------------------------------------------------------
+    // ============================================================================
     @Override
     @Transactional(readOnly = true)
     public List<Question> findByQuiz(Long quizId) {

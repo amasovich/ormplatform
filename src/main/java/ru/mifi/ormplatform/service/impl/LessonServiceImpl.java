@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.Lesson;
@@ -12,7 +14,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Реализация сервиса уроков.
+ * Реализация LessonService.
+ * Выполняет полную валидацию входных данных, нормализацию строковых полей
+ * и обработку ошибок в соответствии с единым стилем платформы ORM.
  */
 @Service
 @Transactional
@@ -27,29 +31,49 @@ public class LessonServiceImpl implements LessonService {
         this.moduleRepository = moduleRepository;
     }
 
+    // ============================================================================
+    //                                CREATE LESSON
+    // ============================================================================
+
     @Override
     public Lesson createLesson(Long moduleId,
                                String title,
                                String content,
                                String videoUrl) {
 
+        // -----------------------------
+        // Валидация входных данных
+        // -----------------------------
+        if (moduleId == null) {
+            throw new ValidationException("moduleId is required");
+        }
+        if (title == null || title.trim().isEmpty()) {
+            throw new ValidationException("Lesson title cannot be empty");
+        }
+        if (content == null || content.trim().isEmpty()) {
+            throw new ValidationException("Lesson content cannot be empty");
+        }
+
+        // -----------------------------
+        // Получение модуля
+        // -----------------------------
         Module module = moduleRepository.findById(moduleId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Модуль с id=" + moduleId + " не найден"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Module not found: id=" + moduleId));
 
-        // Нормализация
+        // -----------------------------
+        // Нормализация полей
+        // -----------------------------
         String normalizedTitle = title.trim();
-        String normalizedContent = content != null ? content.trim() : null;
-        String normalizedVideo = videoUrl != null ? videoUrl.trim() : null;
+        String normalizedContent = content.trim();
+        String normalizedVideo =
+                (videoUrl != null && !videoUrl.trim().isEmpty())
+                        ? videoUrl.trim()
+                        : null;
 
-        // Валидация
-        if (normalizedTitle.isEmpty()) {
-            throw new IllegalArgumentException("Название урока не может быть пустым");
-        }
-        if (normalizedContent == null || normalizedContent.isEmpty()) {
-            throw new IllegalArgumentException("Содержимое урока не может быть пустым");
-        }
-
+        // -----------------------------
+        // Создание урока
+        // -----------------------------
         Lesson lesson = new Lesson();
         lesson.setModule(module);
         lesson.setTitle(normalizedTitle);
@@ -59,6 +83,10 @@ public class LessonServiceImpl implements LessonService {
         return lessonRepository.save(lesson);
     }
 
+    // ============================================================================
+    //                                UPDATE LESSON
+    // ============================================================================
+
     @Override
     public Lesson updateLesson(Long id,
                                String title,
@@ -66,24 +94,50 @@ public class LessonServiceImpl implements LessonService {
                                String videoUrl) {
 
         Lesson lesson = lessonRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Урок с id=" + id + " не найден"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Lesson not found: id=" + id));
 
-        if (title != null) lesson.setTitle(title.trim());
-        if (content != null) lesson.setContent(content.trim());
-        lesson.setVideoUrl(videoUrl);
+        // Обновляем только переданные поля
+        if (title != null) {
+            if (title.trim().isEmpty()) {
+                throw new ValidationException("Lesson title cannot be empty");
+            }
+            lesson.setTitle(title.trim());
+        }
+
+        if (content != null) {
+            if (content.trim().isEmpty()) {
+                throw new ValidationException("Lesson content cannot be empty");
+            }
+            lesson.setContent(content.trim());
+        }
+
+        if (videoUrl != null) {
+            String normalizedVideo =
+                    videoUrl.trim().isEmpty() ? null : videoUrl.trim();
+            lesson.setVideoUrl(normalizedVideo);
+        }
 
         return lessonRepository.save(lesson);
     }
 
+    // ============================================================================
+    //                                 DELETE LESSON
+    // ============================================================================
+
     @Override
     public void deleteLesson(Long id) {
-        Lesson lesson = lessonRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Урок с id=" + id + " не найден"));
 
-        lessonRepository.delete(lesson);
+        if (!lessonRepository.existsById(id)) {
+            throw new EntityNotFoundException("Lesson not found: id=" + id);
+        }
+
+        lessonRepository.deleteById(id);
     }
+
+    // ============================================================================
+    //                                    READ
+    // ============================================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -97,4 +151,3 @@ public class LessonServiceImpl implements LessonService {
         return lessonRepository.findAllByModule_Id(moduleId);
     }
 }
-

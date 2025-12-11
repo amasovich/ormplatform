@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.Assignment;
@@ -13,7 +15,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Реализация сервиса заданий.
+ * Реализация AssignmentService.
+ * Включает строгую валидацию входных данных, нормализацию строк и корректную
+ * обработку ошибок (EntityNotFoundException, ValidationException).
  */
 @Service
 @Transactional
@@ -28,6 +32,10 @@ public class AssignmentServiceImpl implements AssignmentService {
         this.lessonRepository = lessonRepository;
     }
 
+    // ============================================================================
+    //                                CREATE ASSIGNMENT
+    // ============================================================================
+
     @Override
     public Assignment createAssignment(Long lessonId,
                                        String title,
@@ -35,25 +43,38 @@ public class AssignmentServiceImpl implements AssignmentService {
                                        LocalDate dueDate,
                                        Integer maxScore) {
 
-        Lesson lesson = lessonRepository.findById(lessonId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Урок с id=" + lessonId + " не найден"));
-
-        // Нормализация строк
-        String normalizedTitle = title.trim();
-        String normalizedDescription = description != null ? description.trim() : null;
-
-        // Валидация входных данных
-        if (normalizedTitle.isEmpty()) {
-            throw new IllegalArgumentException("Название задания не может быть пустым");
+        // -----------------------------
+        // Валидация входных параметров
+        // -----------------------------
+        if (lessonId == null) {
+            throw new ValidationException("lessonId is required");
         }
-        if (normalizedDescription == null || normalizedDescription.isEmpty()) {
-            throw new IllegalArgumentException("Описание задания не может быть пустым");
+        if (title == null || title.trim().isEmpty()) {
+            throw new ValidationException("Assignment title cannot be empty");
+        }
+        if (description == null || description.trim().isEmpty()) {
+            throw new ValidationException("Assignment description cannot be empty");
         }
         if (maxScore == null || maxScore <= 0) {
-            throw new IllegalArgumentException("maxScore должен быть положительным числом");
+            throw new ValidationException("maxScore must be a positive integer");
         }
 
+        // -----------------------------
+        // Загрузка урока
+        // -----------------------------
+        Lesson lesson = lessonRepository.findById(lessonId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Lesson not found: id=" + lessonId));
+
+        // -----------------------------
+        // Нормализация полей
+        // -----------------------------
+        String normalizedTitle = title.trim();
+        String normalizedDescription = description.trim();
+
+        // -----------------------------
+        // Создание задания
+        // -----------------------------
         Assignment assignment = new Assignment();
         assignment.setLesson(lesson);
         assignment.setTitle(normalizedTitle);
@@ -63,6 +84,10 @@ public class AssignmentServiceImpl implements AssignmentService {
 
         return assignmentRepository.save(assignment);
     }
+
+    // ============================================================================
+    //                                     READ
+    // ============================================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -76,4 +101,3 @@ public class AssignmentServiceImpl implements AssignmentService {
         return assignmentRepository.findAllByLesson_Id(lessonId);
     }
 }
-

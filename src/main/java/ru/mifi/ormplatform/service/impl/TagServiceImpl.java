@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.Tag;
@@ -10,7 +12,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Реализация сервиса тегов курсов.
+ * Реализация сервиса для работы с тегами.
+ * Содержит валидацию входных данных, нормализацию строк,
+ * проверки уникальности и корректную обработку ошибок.
  */
 @Service
 @Transactional
@@ -22,40 +26,52 @@ public class TagServiceImpl implements TagService {
         this.tagRepository = tagRepository;
     }
 
-    /**
-     * Создание нового тега. Если такой уже есть — возвращаю существующий.
-     */
+    // ============================================================
+    //                         CREATE TAG
+    // ============================================================
+
     @Override
     public Tag createTag(String name) {
 
-        // Нормализация строки
-        String normalized = name.trim();
+        // Валидация
+        if (name == null || name.trim().isEmpty()) {
+            throw new ValidationException("Tag name cannot be empty");
+        }
 
-        // если тег уже существует — возвращаем его
+        // Нормализация
+        String normalized = name.trim().toLowerCase();
+
+        // Проверка существования
         Optional<Tag> existing = tagRepository.findByName(normalized);
         if (existing.isPresent()) {
             return existing.get();
         }
 
+        // Создание нового тега
         Tag tag = new Tag();
         tag.setName(normalized);
 
         return tagRepository.save(tag);
     }
 
+    // ============================================================
+    //                         READ TAGS
+    // ============================================================
+
     @Override
     @Transactional(readOnly = true)
     public Optional<Tag> findByName(String name) {
-        return tagRepository.findByName(name);
+        if (name == null || name.isBlank()) return Optional.empty();
+        return tagRepository.findByName(name.trim().toLowerCase());
     }
 
-    /**
-     * Поиск тегов по подстроке (регистронезависимо).
-     */
     @Override
     @Transactional(readOnly = true)
     public List<Tag> searchByName(String namePart) {
-        return tagRepository.findAllByNameContainingIgnoreCase(namePart);
+        if (namePart == null || namePart.isBlank()) {
+            return List.of();
+        }
+        return tagRepository.findAllByNameContainingIgnoreCase(namePart.trim());
     }
 
     @Override
@@ -64,37 +80,48 @@ public class TagServiceImpl implements TagService {
         return tagRepository.findAll();
     }
 
-    /**
-     * Обновление тега.
-     */
+    // ============================================================
+    //                         UPDATE TAG
+    // ============================================================
+
     @Override
     public Tag updateTag(Long id, String newName) {
-        Tag tag = tagRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Tag not found: id=" + id));
+
+        if (newName == null || newName.trim().isEmpty()) {
+            throw new ValidationException("New tag name cannot be empty");
+        }
 
         String normalized = newName.trim().toLowerCase();
 
-        // Проверяем, что имя не занято другим тегом
+        // Получение тега или ошибка 404
+        Tag tag = tagRepository.findById(id)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Tag not found: id=" + id));
+
+        // Проверка уникальности: имя занято другим тегом
         tagRepository.findByName(normalized)
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
-                    throw new IllegalStateException("Tag with name '" + normalized + "' already exists");
+                    throw new ValidationException(
+                            "Tag with name '" + normalized + "' already exists"
+                    );
                 });
 
         tag.setName(normalized);
         return tagRepository.save(tag);
     }
 
-    /**
-     * Удаление тега.
-     */
+    // ============================================================
+    //                         DELETE TAG
+    // ============================================================
+
     @Override
     public void deleteTag(Long id) {
+
         if (!tagRepository.existsById(id)) {
-            throw new IllegalArgumentException("Tag not found: id=" + id);
+            throw new EntityNotFoundException("Tag not found: id=" + id);
         }
+
         tagRepository.deleteById(id);
     }
-
 }
-

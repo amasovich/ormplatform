@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.Assignment;
@@ -16,7 +18,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Реализация сервиса решений заданий.
+ * Реализация сервиса решений практических заданий.
+ * Содержит валидацию, проверки ролей,
+ * защиту от дубликатов и корректную обработку ошибок.
  */
 @Service
 @Transactional
@@ -34,51 +38,66 @@ public class SubmissionServiceImpl implements SubmissionService {
         this.userRepository = userRepository;
     }
 
+    // =========================================================================
+    //                           SUBMIT ASSIGNMENT
+    // =========================================================================
+
     @Override
     public Submission submitAssignment(Long assignmentId,
                                        Long studentId,
                                        String content,
                                        LocalDateTime submittedAt) {
 
+        // -----------------------------
+        // Валидация входных данных
+        // -----------------------------
+        if (studentId == null) {
+            throw new ValidationException("studentId is required");
+        }
+        if (assignmentId == null) {
+            throw new ValidationException("assignmentId is required");
+        }
+        if (content == null || content.trim().isEmpty()) {
+            throw new ValidationException("Submission content cannot be empty");
+        }
+
+        String normalizedContent = content.trim();
+        LocalDateTime timestamp = (submittedAt != null) ? submittedAt : LocalDateTime.now();
+
+        // -----------------------------
+        // Получение задания и студента
+        // -----------------------------
         Assignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Задание с id=" + assignmentId + " не найдено"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Assignment not found: id=" + assignmentId));
 
         User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Пользователь с id=" + studentId + " не найден"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("User not found: id=" + studentId));
 
-        // 🔥 Проверка роли
+        // -----------------------------
+        // Проверка роли
+        // -----------------------------
         if (student.getRole() != UserRole.STUDENT) {
-            throw new IllegalArgumentException(
-                    "Только STUDENT может сдавать задание");
+            throw new ValidationException("Only a STUDENT may submit an assignment");
         }
 
-        // 🔥 Проверка на повторную сдачу
-        Optional<Submission> existing =
-                submissionRepository.findByAssignment_IdAndStudent_Id(assignmentId, studentId);
+        // -----------------------------
+        // Проверка на повторную сдачу
+        // -----------------------------
+        submissionRepository.findByAssignment_IdAndStudent_Id(assignmentId, studentId)
+                .ifPresent(existing -> {
+                    throw new ValidationException("Student has already submitted this assignment");
+                });
 
-        if (existing.isPresent()) {
-            throw new IllegalStateException(
-                    "Студент уже сдавал это задание");
-        }
-
-        // Нормализация текста решения
-        String normalizedContent = (content != null) ? content.trim() : "";
-        if (normalizedContent.isEmpty()) {
-            throw new IllegalArgumentException("Содержимое решения не может быть пустым");
-        }
-
-        // Защита от null submittedAt
-        if (submittedAt == null) {
-            submittedAt = LocalDateTime.now();
-        }
-
+        // -----------------------------
+        // Создание новой отправки
+        // -----------------------------
         Submission submission = new Submission();
         submission.setAssignment(assignment);
         submission.setStudent(student);
         submission.setContent(normalizedContent);
-        submission.setSubmittedAt(submittedAt);
+        submission.setSubmittedAt(timestamp);
 
         submission.setScore(null);
         submission.setFeedback(null);
@@ -86,33 +105,59 @@ public class SubmissionServiceImpl implements SubmissionService {
         return submissionRepository.save(submission);
     }
 
+    // =========================================================================
+    //                             GRADE SUBMISSION
+    // =========================================================================
+
     @Override
     public Submission gradeSubmission(Long submissionId,
                                       Integer score,
                                       String feedback) {
 
+        // -----------------------------
+        // Валидация входных данных
+        // -----------------------------
+        if (score == null) {
+            throw new ValidationException("Score is required");
+        }
+
+        // -----------------------------
+        // Получение отправки
+        // -----------------------------
         Submission submission = submissionRepository.findById(submissionId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Отправка с id=" + submissionId + " не найдена"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Submission not found: id=" + submissionId));
 
         Assignment assignment = submission.getAssignment();
         Integer maxScore = assignment.getMaxScore();
 
-        // Проверка валидности оценки
-        if (score == null || score < 0 || score > maxScore) {
-            throw new IllegalArgumentException(
-                    "Оценка должна быть от 0 до " + maxScore);
+        // -----------------------------
+        // Проверка диапазона оценки
+        // -----------------------------
+        if (score < 0 || score > maxScore) {
+            throw new ValidationException(
+                    "Score must be between 0 and " + maxScore
+            );
         }
 
-        // Нормализация feedback (если есть)
+        // -----------------------------
+        // Нормализация комментария
+        // -----------------------------
         String normalizedFeedback =
-                (feedback != null) ? feedback.trim() : null;
+                (feedback != null && !feedback.isBlank()) ? feedback.trim() : null;
 
+        // -----------------------------
+        // Обновление сущности
+        // -----------------------------
         submission.setScore(score);
         submission.setFeedback(normalizedFeedback);
 
         return submissionRepository.save(submission);
     }
+
+    // =========================================================================
+    //                                FIND
+    // =========================================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -132,9 +177,17 @@ public class SubmissionServiceImpl implements SubmissionService {
         return submissionRepository.findAllByStudent_Id(studentId);
     }
 
+    // =========================================================================
+    //                                DELETE
+    // =========================================================================
+
     @Override
     public void deleteSubmission(Long id) {
+
+        if (!submissionRepository.existsById(id)) {
+            throw new EntityNotFoundException("Submission not found: id=" + id);
+        }
+
         submissionRepository.deleteById(id);
     }
-
 }

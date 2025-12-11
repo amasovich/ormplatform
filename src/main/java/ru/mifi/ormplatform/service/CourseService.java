@@ -8,18 +8,19 @@ import java.util.Optional;
 
 /**
  * Сервис для работы с курсами.
+ * Содержит операции создания, обновления, удаления и поиска.
  */
 public interface CourseService {
 
     /**
      * Создаю новый курс.
      *
-     * @param title название курса.
+     * @param title       название курса.
      * @param description описание курса.
-     * @param categoryId идентификатор категории.
-     * @param teacherId идентификатор преподавателя (пользователь с ролью TEACHER).
-     * @param duration строковое описание длительности.
-     * @param startDate дата старта курса (может быть null).
+     * @param categoryId  идентификатор категории.
+     * @param teacherId   идентификатор преподавателя (роль TEACHER).
+     * @param duration    длительность курса (в часах, неделях и т.п.).
+     * @param startDate   дата старта курса (может быть null).
      * @return созданный курс.
      */
     Course createCourse(String title,
@@ -30,78 +31,51 @@ public interface CourseService {
                         LocalDate startDate);
 
     /**
-     * Добавляю тег к курсу (через таблицу course_tag).
+     * Добавляю тег к курсу.
      *
      * @param courseId идентификатор курса.
-     * @param tagId идентификатор тега.
+     * @param tagId    идентификатор тега.
      * @return обновлённый курс.
      */
     Course addTagToCourse(Long courseId, Long tagId);
 
     /**
-     * Курсы по категории.
-     *
-     * @param categoryId идентификатор категории.
-     * @return список курсов.
+     * Получаю курсы по категории.
      */
     List<Course> findByCategory(Long categoryId);
 
     /**
-     * Курсы для конкретного преподавателя.
-     *
-     * @param teacherId идентификатор преподавателя.
-     * @return список курсов.
+     * Получаю курсы, которые ведёт преподаватель.
      */
     List<Course> findByTeacher(Long teacherId);
 
     /**
      * Поиск курсов по части названия.
-     *
-     * @param titlePart часть названия.
-     * @return список курсов.
      */
     List<Course> searchByTitle(String titlePart);
 
     /**
-     * Возвращаю все курсы в системе.
-     *
-     * @return список курсов.
+     * Получаю все курсы.
      */
     List<Course> findAllCourses();
 
     /**
-     * Получаю курс по идентификатору.
-     *
-     * @param id идентификатор курса.
-     * @return Optional с курсом, если найден.
+     * Поиск курса по id.
      */
     Optional<Course> findById(Long id);
 
     /**
-     * Получаю курс по идентификатору или бросаю IllegalArgumentException,
-     * если курс не найден. Этот метод удобно использовать в REST-слое.
-     *
-     * @param id идентификатор курса.
-     * @return найденный курс.
+     * Получаю курс по id или выбрасываю исключение.
      */
     Course getByIdOrThrow(Long id);
 
     /**
-     * Сохраняю изменения существующего курса.
-     * Используется при обновлении данных курса.
-     *
-     * @param course объект курса с внесёнными изменениями.
-     * @return сохранённый курс.
+     * Сохраняю изменения курса.
      */
     Course save(Course course);
 
     /**
-     * Удаляю курс по идентификатору.
-     * В рамках учебного проекта выполняется жёсткое удаление.
-     *
-     * @param id идентификатор курса.
+     * Удаляю курс.
      */
     void delete(Long id);
-
 }
-

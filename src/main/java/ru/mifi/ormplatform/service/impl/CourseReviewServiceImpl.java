@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.Course;
@@ -16,7 +18,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Реализация сервиса для работы с отзывами пользователя по курсу.
+ * Реализация CourseReviewService.
+ * Включает строгую валидацию входных данных, проверки ролей,
+ * корректную обработку ошибок и нормализацию текстовых полей.
  */
 @Service
 @Transactional
@@ -34,48 +38,85 @@ public class CourseReviewServiceImpl implements CourseReviewService {
         this.userRepository = userRepository;
     }
 
+    // ============================================================================
+    //                               CREATE REVIEW
+    // ============================================================================
+
     @Override
     public CourseReview createReview(Long courseId,
                                      Long studentId,
                                      Integer rating,
                                      String comment) {
 
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Курс с id=" + courseId + " не найден"));
-
-        User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Пользователь с id=" + studentId + " не найден"));
-
-        if (student.getRole() != UserRole.STUDENT) {
-            throw new IllegalStateException("Только STUDENT может оставлять отзыв");
+        // ----- Валидация базовых параметров -----
+        if (courseId == null) {
+            throw new ValidationException("courseId is required");
+        }
+        if (studentId == null) {
+            throw new ValidationException("studentId is required");
+        }
+        if (rating == null || rating < 1 || rating > 5) {
+            throw new ValidationException("Rating must be between 1 and 5");
         }
 
+        // ----- Загрузка курса -----
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Course not found: id=" + courseId));
+
+        // ----- Загрузка пользователя -----
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("User not found: id=" + studentId));
+
+        // ----- Проверка роли -----
+        if (student.getRole() != UserRole.STUDENT) {
+            throw new ValidationException("Only STUDENT can leave course reviews");
+        }
+
+        // ----- Нормализация -----
+        String normalizedComment = (comment != null && !comment.isBlank())
+                ? comment.trim()
+                : null;
+
+        // ----- Создание отзыва -----
         CourseReview review = new CourseReview();
         review.setCourse(course);
         review.setStudent(student);
         review.setRating(rating);
-        review.setComment(comment);
+        review.setComment(normalizedComment);
         review.setCreatedAt(LocalDateTime.now());
 
         return reviewRepository.save(review);
     }
 
+
+    // ============================================================================
+    //                                   READ
+    // ============================================================================
+
     @Override
+    @Transactional(readOnly = true)
     public Optional<CourseReview> findById(Long id) {
         return reviewRepository.findById(id);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CourseReview> findByCourse(Long courseId) {
         return reviewRepository.findAllByCourse_Id(courseId);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CourseReview> findByStudent(Long studentId) {
         return reviewRepository.findAllByStudent_Id(studentId);
     }
+
+
+    // ============================================================================
+    //                                 UPDATE
+    // ============================================================================
 
     @Override
     public CourseReview updateReview(Long reviewId,
@@ -83,22 +124,35 @@ public class CourseReviewServiceImpl implements CourseReviewService {
                                      String comment) {
 
         CourseReview review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Отзыв с id=" + reviewId + " не найден"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Review not found: id=" + reviewId));
+
+        // Валидация рейтинга
+        if (rating == null || rating < 1 || rating > 5) {
+            throw new ValidationException("Rating must be between 1 and 5");
+        }
+
+        // Нормализация
+        String normalizedComment =
+                (comment != null && !comment.isBlank()) ? comment.trim() : null;
 
         review.setRating(rating);
-        review.setComment(comment);
+        review.setComment(normalizedComment);
 
         return reviewRepository.save(review);
     }
 
+
+    // ============================================================================
+    //                                DELETE
+    // ============================================================================
+
     @Override
     public void deleteReview(Long reviewId) {
         CourseReview review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Отзыв с id=" + reviewId + " не найден"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Review not found: id=" + reviewId));
 
         reviewRepository.delete(review);
     }
-
 }

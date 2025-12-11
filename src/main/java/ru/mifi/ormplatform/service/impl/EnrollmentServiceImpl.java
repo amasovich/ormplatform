@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.Course;
@@ -17,7 +19,9 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Реализация сервиса управления записями на курс.
+ * Реализация EnrollmentService.
+ * Включает строгую бизнес-валидацию, корректную работу со статусами,
+ * проверки ролей и стандартные исключения.
  */
 @Service
 @Transactional
@@ -35,32 +39,45 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         this.userRepository = userRepository;
     }
 
+    // ============================================================================
+    //                              ENROLL STUDENT
+    // ============================================================================
+
     @Override
     public Enrollment enrollStudent(Long courseId, Long studentId) {
 
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Курс с id=" + courseId + " не найден"));
-
-        User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Пользователь с id=" + studentId + " не найден"));
-
-        if (student.getRole() != UserRole.STUDENT) {
-            throw new IllegalArgumentException(
-                    "Записать на курс можно только пользователя с ролью STUDENT");
+        // ---- Валидация параметров ----
+        if (courseId == null) {
+            throw new ValidationException("courseId is required");
+        }
+        if (studentId == null) {
+            throw new ValidationException("studentId is required");
         }
 
-        // проверка существующей записи
+        // ---- Загрузка курса ----
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Course not found: id=" + courseId));
+
+        // ---- Загрузка студента ----
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("User not found: id=" + studentId));
+
+        // ---- Проверка роли ----
+        if (student.getRole() != UserRole.STUDENT) {
+            throw new ValidationException("Only STUDENT can be enrolled in a course");
+        }
+
+        // ---- Проверка существующей записи ----
         Optional<Enrollment> existing =
                 enrollmentRepository.findByStudent_IdAndCourse_Id(studentId, courseId);
 
         if (existing.isPresent() && existing.get().getStatus() == EnrollmentStatus.ACTIVE) {
-            throw new IllegalStateException(
-                    "Студент уже записан на этот курс в статусе ACTIVE");
+            throw new ValidationException("Student is already enrolled in this course");
         }
 
-        // создаём новую запись
+        // ---- Создание новой записи ----
         Enrollment enrollment = new Enrollment();
         enrollment.setCourse(course);
         enrollment.setStudent(student);
@@ -69,6 +86,10 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
         return enrollmentRepository.save(enrollment);
     }
+
+    // ============================================================================
+    //                                    READ
+    // ============================================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -88,23 +109,35 @@ public class EnrollmentServiceImpl implements EnrollmentService {
         return enrollmentRepository.findById(id);
     }
 
+    // ============================================================================
+    //                                    UPDATE
+    // ============================================================================
+
     @Override
     public Enrollment updateStatus(Long id, EnrollmentStatus status) {
+
+        if (status == null) {
+            throw new ValidationException("Enrollment status cannot be null");
+        }
+
         Enrollment enrollment = enrollmentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Запись enrollment с id=" + id + " не найдена"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Enrollment not found: id=" + id));
 
         enrollment.setStatus(status);
         return enrollmentRepository.save(enrollment);
     }
 
+    // ============================================================================
+    //                                    DELETE
+    // ============================================================================
+
     @Override
     public void delete(Long id) {
         Enrollment enrollment = enrollmentRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Запись enrollment с id=" + id + " не найдена"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Enrollment not found: id=" + id));
 
         enrollmentRepository.delete(enrollment);
     }
-
 }

@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.Category;
@@ -11,8 +13,7 @@ import java.util.Optional;
 
 /**
  * Реализация сервиса категорий.
- * <p>
- * Содержит CRUD-операции и бизнес-валидацию по уникальности имён категорий.
+ * Содержит бизнес-валидацию, проверки уникальности и корректные исключения.
  */
 @Service
 @Transactional
@@ -24,22 +25,23 @@ public class CategoryServiceImpl implements CategoryService {
         this.categoryRepository = categoryRepository;
     }
 
-    /**
-     * Создание новой категории.
-     * Если категория с таким именем уже существует — возвращается существующая.
-     */
+    // ============================================================================
+    //                              CREATE CATEGORY
+    // ============================================================================
+
     @Override
     public Category createCategory(String name) {
 
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Название категории не может быть пустым");
+            throw new ValidationException("Category name cannot be empty");
         }
 
         String normalized = name.trim();
 
+        // Проверяем уникальность
         Optional<Category> existing = categoryRepository.findByName(normalized);
         if (existing.isPresent()) {
-            return existing.get();
+            return existing.get(); // Возвращаем существующую категорию
         }
 
         Category category = new Category();
@@ -48,37 +50,58 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryRepository.save(category);
     }
 
-    /**
-     * Обновление категории по id.
-     */
+    // ============================================================================
+    //                              UPDATE CATEGORY
+    // ============================================================================
+
     @Override
     public Category updateCategory(Long id, String name) {
+
         if (name == null || name.trim().isEmpty()) {
-            throw new IllegalArgumentException("Название категории не может быть пустым");
+            throw new ValidationException("Category name cannot be empty");
         }
 
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Категория не найдена: " + id));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Category not found: id=" + id));
 
-        category.setName(name.trim());
+        String normalized = name.trim();
+
+        // Проверяем: не занято ли имя другой категорией
+        categoryRepository.findByName(normalized)
+                .filter(other -> !other.getId().equals(id))
+                .ifPresent(other -> {
+                    throw new ValidationException(
+                            "Category with name '" + normalized + "' already exists"
+                    );
+                });
+
+        category.setName(normalized);
+
         return categoryRepository.save(category);
     }
 
-    /**
-     * Удаление категории по id.
-     */
+    // ============================================================================
+    //                              DELETE CATEGORY
+    // ============================================================================
+
     @Override
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
-            throw new IllegalArgumentException("Категория не найдена: " + id);
+            throw new EntityNotFoundException("Category not found: id=" + id);
         }
         categoryRepository.deleteById(id);
     }
 
+    // ============================================================================
+    //                              FIND METHODS
+    // ============================================================================
+
     @Override
     @Transactional(readOnly = true)
     public Optional<Category> findByName(String name) {
-        return categoryRepository.findByName(name);
+        if (name == null || name.isBlank()) return Optional.empty();
+        return categoryRepository.findByName(name.trim());
     }
 
     @Override
@@ -87,13 +110,11 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryRepository.findAll();
     }
 
-    /**
-     * Получение категории по id или исключение.
-     */
     @Override
     @Transactional(readOnly = true)
     public Category getByIdOrThrow(Long id) {
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Категория не найдена: " + id));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Category not found: id=" + id));
     }
 }

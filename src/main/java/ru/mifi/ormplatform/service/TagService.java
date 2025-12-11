@@ -7,27 +7,29 @@ import java.util.Optional;
 
 /**
  * Сервис для работы с тегами курсов.
+ * Содержит операции создания, поиска, обновления и удаления тегов.
  */
 public interface TagService {
 
     /**
      * Создаю новый тег.
+     * Если тег с таким названием уже существует — возвращаю существующий.
      *
      * @param name название тега.
-     * @return созданный тег.
+     * @return созданный или найденный тег.
      */
     Tag createTag(String name);
 
     /**
-     * Нахожу тег по названию.
+     * Ищу тег по названию.
      *
-     * @param name название.
-     * @return тег, если найден.
+     * @param name название тега.
+     * @return Optional с тегом, если найден.
      */
     Optional<Tag> findByName(String name);
 
     /**
-     * Поиск тегов по подстроке (для фильтрации на UI).
+     * Ищу теги по части названия (регистронезависимо).
      *
      * @param namePart часть названия.
      * @return список тегов.
@@ -35,15 +37,26 @@ public interface TagService {
     List<Tag> searchByName(String namePart);
 
     /**
-     * Получаю все теги.
+     * Получаю полный список тегов.
      *
-     * @return список тегов.
+     * @return список всех тегов.
      */
     List<Tag> findAll();
 
+    /**
+     * Обновляю название тега.
+     *
+     * @param id идентификатор тега.
+     * @param newName новое название.
+     * @return обновлённый тег.
+     */
     Tag updateTag(Long id, String newName);
 
+    /**
+     * Удаляю тег по id.
+     *
+     * @param id идентификатор тега.
+     */
     void deleteTag(Long id);
 
 }
-

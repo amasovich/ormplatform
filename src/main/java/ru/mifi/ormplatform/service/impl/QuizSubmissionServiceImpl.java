@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.service.impl;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mifi.ormplatform.domain.entity.Quiz;
@@ -17,6 +19,10 @@ import java.util.Map;
 
 /**
  * Реализация сервиса для работы с результатами прохождения квизов.
+ * Поддерживает:
+ *  — ручное создание результата (createSubmission),
+ *  — автоматическую оценку (evaluateAndSaveSubmission),
+ *  — поиск результатов по студенту и квизу.
  */
 @Service
 @Transactional
@@ -34,6 +40,10 @@ public class QuizSubmissionServiceImpl implements QuizSubmissionService {
         this.userRepository = userRepository;
     }
 
+    // =========================================================================
+    // CREATE (ручное создание результата)
+    // =========================================================================
+
     @Override
     public QuizSubmission createSubmission(Long quizId,
                                            Long studentId,
@@ -41,44 +51,44 @@ public class QuizSubmissionServiceImpl implements QuizSubmissionService {
                                            LocalDateTime takenAt) {
 
         Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Квиз с id=" + quizId + " не найден"));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Quiz not found: id=" + quizId));
 
         User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Пользователь с id=" + studentId + " не найден"));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "User not found: id=" + studentId));
 
-        // Проверка роли
         if (student.getRole() != UserRole.STUDENT) {
-            throw new IllegalStateException("Только STUDENT может отправлять прохождение квиза");
+            throw new ValidationException(
+                    "Only STUDENT can create a quiz submission");
         }
 
-        // Запрет повторного прохождения
-        List<QuizSubmission> existing = quizSubmissionRepository.findAllByStudent_Id(studentId)
+        // Проверка на повторную попытку (вариант №2)
+        boolean alreadySubmitted = quizSubmissionRepository.findAllByStudent_Id(studentId)
                 .stream()
-                .filter(s -> s.getQuiz().getId().equals(quizId))
-                .toList();
+                .anyMatch(s -> s.getQuiz().getId().equals(quizId));
 
-        if (!existing.isEmpty()) {
-            throw new IllegalStateException("Этот студент уже проходил указанный квиз");
+        if (alreadySubmitted) {
+            throw new ValidationException(
+                    "Student has already submitted this quiz");
         }
 
-        // Валидация оценки
         if (score != null && score < 0) {
-            throw new IllegalArgumentException("Score не может быть отрицательным");
+            throw new ValidationException("Score cannot be negative");
         }
-
-        // Если не передано время — ставим текущее
-        LocalDateTime timestamp = (takenAt != null ? takenAt : LocalDateTime.now());
 
         QuizSubmission submission = new QuizSubmission();
         submission.setQuiz(quiz);
         submission.setStudent(student);
         submission.setScore(score);
-        submission.setTakenAt(timestamp);
+        submission.setTakenAt(takenAt != null ? takenAt : LocalDateTime.now());
 
         return quizSubmissionRepository.save(submission);
     }
+
+    // =========================================================================
+    // FIND
+    // =========================================================================
 
     @Override
     @Transactional(readOnly = true)
@@ -92,6 +102,10 @@ public class QuizSubmissionServiceImpl implements QuizSubmissionService {
         return quizSubmissionRepository.findAllByStudent_Id(studentId);
     }
 
+    // =========================================================================
+    // EVALUATE AND SAVE (основная логика проверки квиза)
+    // =========================================================================
+
     @Override
     public QuizSubmission evaluateAndSaveSubmission(Long quizId,
                                                     Long studentId,
@@ -99,39 +113,52 @@ public class QuizSubmissionServiceImpl implements QuizSubmissionService {
                                                     LocalDateTime takenAt) {
 
         Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new IllegalArgumentException("Квиз не найден: " + quizId));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Quiz not found: id=" + quizId));
 
         User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден: " + studentId));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "User not found: id=" + studentId));
 
         if (student.getRole() != UserRole.STUDENT) {
-            throw new IllegalStateException("Только студент может проходить квиз");
+            throw new ValidationException(
+                    "Only STUDENT can submit a quiz");
         }
 
-        // Запрет повторного прохождения
-        boolean alreadyPassed = quizSubmissionRepository.findAllByStudent_Id(studentId)
+        // Проверка, что студент не проходил квиз ранее
+        boolean alreadySubmitted = quizSubmissionRepository.findAllByStudent_Id(studentId)
                 .stream()
                 .anyMatch(s -> s.getQuiz().getId().equals(quizId));
 
-        if (alreadyPassed) {
-            throw new IllegalStateException("Студент уже проходил этот квиз");
+        if (alreadySubmitted) {
+            throw new ValidationException(
+                    "Student has already completed this quiz");
+        }
+
+        if (answers == null || answers.isEmpty()) {
+            throw new ValidationException(
+                    "Answer map cannot be empty");
         }
 
         int score = 0;
 
+        // Автоматический подсчёт баллов
         if (quiz.getQuestions() != null) {
             for (var question : quiz.getQuestions()) {
 
                 Long selectedOptionId = answers.get(question.getId());
-                if (selectedOptionId == null) continue;
+                if (selectedOptionId == null) {
+                    continue;
+                }
 
-                if (question.getOptions() == null) continue;
+                boolean correct =
+                        question.getOptions() != null &&
+                                question.getOptions().stream()
+                                        .anyMatch(o -> o.getId().equals(selectedOptionId) && o.isCorrect());
 
-                boolean correct = question.getOptions()
-                        .stream()
-                        .anyMatch(o -> o.getId().equals(selectedOptionId) && o.isCorrect());
-
-                if (correct) score++;
+                if (correct) {
+                    score++;
+                }
             }
         }
 
@@ -143,5 +170,4 @@ public class QuizSubmissionServiceImpl implements QuizSubmissionService {
 
         return quizSubmissionRepository.save(submission);
     }
-
 }

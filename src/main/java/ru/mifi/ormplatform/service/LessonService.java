@@ -6,16 +6,17 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Сервис для работы с уроками внутри модуля.
+ * Сервис для работы с уроками внутри модулей курса.
+ * Предоставляет операции создания, чтения, обновления и удаления уроков.
  */
 public interface LessonService {
 
     /**
-     * Создаю новый урок в модуле.
+     * Создаю новый урок внутри указанного модуля.
      *
-     * @param moduleId идентификатор модуля.
+     * @param moduleId идентификатор модуля, которому принадлежит урок.
      * @param title    название урока.
-     * @param content  текстовое содержимое (описание, конспект).
+     * @param content  содержимое урока (обязательное поле).
      * @param videoUrl ссылка на видеоурок (может быть null).
      * @return созданный урок.
      */
@@ -25,7 +26,13 @@ public interface LessonService {
                         String videoUrl);
 
     /**
-     * Обновляю урок.
+     * Обновляю параметры урока.
+     *
+     * @param id       идентификатор урока.
+     * @param title    новое название (опционально).
+     * @param content  новое содержимое (опционально).
+     * @param videoUrl новая ссылка на видео (опционально).
+     * @return обновлённый урок.
      */
     Lesson updateLesson(Long id,
                         String title,
@@ -33,18 +40,25 @@ public interface LessonService {
                         String videoUrl);
 
     /**
-     * Удаляю урок по id.
+     * Удаляю урок.
+     *
+     * @param id идентификатор удаляемого урока.
      */
     void deleteLesson(Long id);
 
     /**
-     * Получаю урок по идентификатору.
+     * Получаю урок по ID.
+     *
+     * @param id идентификатор урока.
+     * @return Optional с уроком.
      */
     Optional<Lesson> findById(Long id);
 
     /**
-     * Получаю список всех уроков конкретного модуля.
+     * Получаю все уроки конкретного модуля.
+     *
+     * @param moduleId идентификатор модуля.
+     * @return список уроков.
      */
     List<Lesson> findByModule(Long moduleId);
 }
-

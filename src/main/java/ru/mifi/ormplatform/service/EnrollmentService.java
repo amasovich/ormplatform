@@ -8,6 +8,8 @@ import java.util.Optional;
 
 /**
  * Сервис для управления записями студентов на курсы.
+ * Содержит операции добавления, обновления статуса,
+ * удаления и выборки записей.
  */
 public interface EnrollmentService {
 
@@ -15,37 +17,37 @@ public interface EnrollmentService {
      * Записываю студента на курс.
      *
      * @param courseId  идентификатор курса.
-     * @param studentId идентификатор студента (User с ролью STUDENT).
+     * @param studentId идентификатор студента (роль STUDENT).
      * @return созданная запись Enrollment.
      */
     Enrollment enrollStudent(Long courseId, Long studentId);
 
     /**
-     * Возвращаю все записи конкретного студента.
+     * Получаю записи конкретного студента.
      *
      * @param studentId идентификатор студента.
-     * @return список Enrollment.
+     * @return список записей.
      */
     List<Enrollment> findByStudent(Long studentId);
 
     /**
-     * Возвращаю всех студентов, записанных на курс.
+     * Получаю всех студентов, записанных на курс.
      *
      * @param courseId идентификатор курса.
-     * @return список Enrollment.
+     * @return список записей.
      */
     List<Enrollment> findByCourse(Long courseId);
 
     /**
-     * Ищу запись по идентификатору.
+     * Получаю запись по id.
      *
-     * @param id идентификатор записи.
-     * @return Optional с записью, если найдена.
+     * @param id идентификатор.
+     * @return Optional с записью.
      */
     Optional<Enrollment> findById(Long id);
 
     /**
-     * Обновляю статус записи.
+     * Обновляю статус существующей записи.
      *
      * @param id идентификатор записи.
      * @param status новый статус.
@@ -54,10 +56,9 @@ public interface EnrollmentService {
     Enrollment updateStatus(Long id, EnrollmentStatus status);
 
     /**
-     * Удаляю запись студента на курс (отписываю).
+     * Удаляю запись студента с курса.
      *
      * @param id идентификатор записи.
      */
     void delete(Long id);
-
 }
