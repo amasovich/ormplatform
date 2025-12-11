@@ -13,7 +13,6 @@ import java.util.Optional;
 
 /**
  * Реализация сервиса модулей курса.
- * Здесь я инкапсулирую работу с репозиториями Module и Course.
  */
 @Service
 @Transactional
@@ -38,11 +37,38 @@ public class ModuleServiceImpl implements ModuleService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Курс с id=" + courseId + " не найден"));
 
+        // Нормализация строк
+        String normalizedTitle = title.trim();
+        String normalizedDescription = (description != null) ? description.trim() : null;
+
+        // Сохраняем исходный индекс в НЕ изменяемую переменную
+        final Integer originalIndex = orderIndex;
+
+        // Все существующие модули
+        List<Module> existingModules =
+                moduleRepository.findAllByCourse_IdOrderByOrderIndexAsc(courseId);
+
+        // Проверяем — занят ли originalIndex
+        boolean exists = existingModules.stream()
+                .anyMatch(m -> m.getOrderIndex().equals(originalIndex));
+
+        // Вычисляем итоговый индекс (можем изменить эту переменную!)
+        int finalIndex = originalIndex;
+
+        if (exists) {
+            int maxIndex = existingModules.stream()
+                    .mapToInt(Module::getOrderIndex)
+                    .max()
+                    .orElse(0);
+            finalIndex = maxIndex + 1;   // назначаем новый свободный
+        }
+
+        // Создание модуля
         Module module = new Module();
         module.setCourse(course);
-        module.setTitle(title);
-        module.setOrderIndex(orderIndex);
-        module.setDescription(description);
+        module.setTitle(normalizedTitle);
+        module.setOrderIndex(finalIndex);
+        module.setDescription(normalizedDescription);
 
         return moduleRepository.save(module);
     }

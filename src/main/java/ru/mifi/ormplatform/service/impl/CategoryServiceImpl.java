@@ -24,9 +24,19 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public Category createCategory(String name) {
-        // На будущее сюда можно добавить проверку, что такой категории ещё нет.
+
+        // Нормализация строки
+        String normalized = name.trim();
+
+        // если такая категория уже существует — возвращаем её
+        Optional<Category> existing = categoryRepository.findByName(normalized);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
         Category category = new Category();
-        category.setName(name);
+        category.setName(normalized);
+
         return categoryRepository.save(category);
     }
 

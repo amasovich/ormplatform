@@ -14,7 +14,7 @@ import ru.mifi.ormplatform.service.EnrollmentService;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 /**
  * Реализация сервиса управления записями на курс.
@@ -37,6 +37,7 @@ public class EnrollmentServiceImpl implements EnrollmentService {
 
     @Override
     public Enrollment enrollStudent(Long courseId, Long studentId) {
+
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Курс с id=" + courseId + " не найден"));
@@ -50,20 +51,16 @@ public class EnrollmentServiceImpl implements EnrollmentService {
                     "Записать на курс можно только пользователя с ролью STUDENT");
         }
 
-        // Проверяю, не записан ли студент уже на этот курс
-        List<Enrollment> existing = enrollmentRepository.findAll()
-                .stream()
-                .filter(e -> e.getCourse().getId().equals(courseId)
-                        && e.getStudent().getId().equals(studentId)
-                        && e.getStatus() == EnrollmentStatus.ACTIVE)
-                .collect(Collectors.toList());
+        // проверка существующей записи
+        Optional<Enrollment> existing =
+                enrollmentRepository.findByStudent_IdAndCourse_Id(studentId, courseId);
 
-        if (!existing.isEmpty()) {
-            // На этом этапе просто кидаю исключение; позже можно вернуть 409 CONFLICT.
+        if (existing.isPresent() && existing.get().getStatus() == EnrollmentStatus.ACTIVE) {
             throw new IllegalStateException(
                     "Студент уже записан на этот курс в статусе ACTIVE");
         }
 
+        // создаём новую запись
         Enrollment enrollment = new Enrollment();
         enrollment.setCourse(course);
         enrollment.setStudent(student);
@@ -76,19 +73,12 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     @Override
     @Transactional(readOnly = true)
     public List<Enrollment> findByStudent(Long studentId) {
-        return enrollmentRepository.findAll()
-                .stream()
-                .filter(e -> e.getStudent().getId().equals(studentId))
-                .collect(Collectors.toList());
+        return enrollmentRepository.findAllByStudent_Id(studentId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Enrollment> findByCourse(Long courseId) {
-        return enrollmentRepository.findAll()
-                .stream()
-                .filter(e -> e.getCourse().getId().equals(courseId))
-                .collect(Collectors.toList());
+        return enrollmentRepository.findAllByCourse_Id(courseId);
     }
 }
-

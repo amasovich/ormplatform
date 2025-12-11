@@ -8,7 +8,6 @@ import java.util.Optional;
 
 /**
  * Сервис для работы с курсами.
- * На этом этапе реализуем базовые операции создания и поиска.
  */
 public interface CourseService {
 

@@ -24,13 +24,6 @@ public class QuizServiceImpl implements QuizService {
     private final CourseRepository courseRepository;
     private final ModuleRepository moduleRepository;
 
-    /**
-     * Конструктор с внедрением зависимостей.
-     *
-     * @param quizRepository   репозиторий квизов.
-     * @param courseRepository репозиторий курсов.
-     * @param moduleRepository репозиторий модулей.
-     */
     public QuizServiceImpl(QuizRepository quizRepository,
                            CourseRepository courseRepository,
                            ModuleRepository moduleRepository) {
@@ -53,10 +46,21 @@ public class QuizServiceImpl implements QuizService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Модуль с id=" + moduleId + " не найден"));
 
+        // Проверяем, что модуль принадлежит курсу
+        if (!module.getCourse().getId().equals(courseId)) {
+            throw new IllegalArgumentException(
+                    "Модуль id=" + moduleId + " не принадлежит курсу id=" + courseId);
+        }
+
+        // Проверяем, что у модуля нет существующего квиза
+        if (quizRepository.findByModule_Id(moduleId).isPresent()) {
+            throw new IllegalStateException(
+                    "Квиз для модуля id=" + moduleId + " уже существует");
+        }
+
         Quiz quiz = new Quiz();
-        quiz.setCourse(course);
         quiz.setModule(module);
-        quiz.setTitle(title);
+        quiz.setTitle(title.trim());
         quiz.setTimeLimit(timeLimitMinutes);
 
         return quizRepository.save(quiz);
@@ -71,15 +75,20 @@ public class QuizServiceImpl implements QuizService {
     @Override
     @Transactional(readOnly = true)
     public Optional<Quiz> findByModule(Long moduleId) {
-        return quizRepository.findByModule_Id(moduleId).stream().findFirst();
-        // если у вас в репозитории метод Optional<Quiz> findByModule_Id(...) —
-        // здесь можно просто вернуть его
+        return quizRepository.findByModule_Id(moduleId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Quiz> findByCourse(Long courseId) {
-        return quizRepository.findAllByCourse_Id(courseId);
+        // 🔥 корректный способ — через модули
+        List<Module> modules =
+                moduleRepository.findAllByCourse_IdOrderByOrderIndexAsc(courseId);
+
+        return modules.stream()
+                .map(module -> quizRepository.findByModule_Id(module.getId()))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .toList();
     }
 }
-

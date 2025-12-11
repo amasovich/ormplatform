@@ -24,13 +24,6 @@ public class QuestionServiceImpl implements QuestionService {
     private final AnswerOptionRepository answerOptionRepository;
     private final QuizRepository quizRepository;
 
-    /**
-     * Конструктор с внедрением зависимостей.
-     *
-     * @param questionRepository     репозиторий вопросов.
-     * @param answerOptionRepository репозиторий вариантов ответов.
-     * @param quizRepository         репозиторий квизов.
-     */
     public QuestionServiceImpl(QuestionRepository questionRepository,
                                AnswerOptionRepository answerOptionRepository,
                                QuizRepository quizRepository) {
@@ -44,13 +37,17 @@ public class QuestionServiceImpl implements QuestionService {
                                    String text,
                                    QuestionType type) {
 
+        if (text == null || text.trim().isEmpty()) {
+            throw new IllegalArgumentException("Текст вопроса не может быть пустым");
+        }
+
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Квиз с id=" + quizId + " не найден"));
 
         Question question = new Question();
         question.setQuiz(quiz);
-        question.setText(text);
+        question.setText(text.trim());
         question.setType(type);
 
         return questionRepository.save(question);
@@ -61,13 +58,36 @@ public class QuestionServiceImpl implements QuestionService {
                                         String text,
                                         boolean isCorrect) {
 
+        if (text == null || text.trim().isEmpty()) {
+            throw new IllegalArgumentException("Текст варианта ответа не может быть пустым");
+        }
+
         Question question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Вопрос с id=" + questionId + " не найден"));
 
+        // Нельзя добавлять варианты к TEXT-вопросу
+        if (question.getType() == QuestionType.TEXT) {
+            throw new IllegalStateException(
+                    "К TEXT-вопросу нельзя добавлять варианты ответа");
+        }
+
+        // Проверка, что SINGLE_CHOICE может иметь только 1 правильный вариант
+        if (question.getType() == QuestionType.SINGLE_CHOICE && isCorrect) {
+            long correctCount = answerOptionRepository.findAllByQuestion_Id(questionId)
+                    .stream()
+                    .filter(AnswerOption::isCorrect)
+                    .count();
+
+            if (correctCount >= 1) {
+                throw new IllegalStateException(
+                        "SINGLE_CHOICE вопрос может иметь только один правильный ответ");
+            }
+        }
+
         AnswerOption option = new AnswerOption();
         option.setQuestion(question);
-        option.setText(text);
+        option.setText(text.trim());
         option.setCorrect(isCorrect);
 
         return answerOptionRepository.save(option);
@@ -79,4 +99,3 @@ public class QuestionServiceImpl implements QuestionService {
         return questionRepository.findAllByQuiz_Id(quizId);
     }
 }
-

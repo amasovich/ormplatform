@@ -6,6 +6,7 @@ import ru.mifi.ormplatform.domain.entity.Category;
 import ru.mifi.ormplatform.domain.entity.Course;
 import ru.mifi.ormplatform.domain.entity.Tag;
 import ru.mifi.ormplatform.domain.entity.User;
+import ru.mifi.ormplatform.domain.enums.UserRole;
 import ru.mifi.ormplatform.repository.CategoryRepository;
 import ru.mifi.ormplatform.repository.CourseRepository;
 import ru.mifi.ormplatform.repository.TagRepository;
@@ -54,6 +55,11 @@ public class CourseServiceImpl implements CourseService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Teacher with id=" + teacherId + " not found"));
 
+        if (teacher.getRole() != UserRole.TEACHER) {
+            throw new IllegalArgumentException(
+                    "User with id=" + teacherId + " is not a TEACHER");
+        }
+
         Course course = new Course();
         course.setTitle(title);
         course.setDescription(description);
@@ -74,6 +80,10 @@ public class CourseServiceImpl implements CourseService {
         Tag tag = tagRepository.findById(tagId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Tag with id=" + tagId + " not found"));
+
+        if (course.getTags().contains(tag)) {
+            return course;
+        }
 
         course.getTags().add(tag);
         // При необходимости можно добавить bidirectional-связь:

@@ -7,7 +7,6 @@ import java.util.Optional;
 
 /**
  * Сервис для работы с модулями курса.
- * Здесь я создаю модули, получаю их по курсу и по идентификатору.
  */
 public interface ModuleService {
 

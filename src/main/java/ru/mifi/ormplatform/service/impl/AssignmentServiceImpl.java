@@ -39,10 +39,25 @@ public class AssignmentServiceImpl implements AssignmentService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Урок с id=" + lessonId + " не найден"));
 
+        // Нормализация строк
+        String normalizedTitle = title.trim();
+        String normalizedDescription = description != null ? description.trim() : null;
+
+        // Валидация входных данных
+        if (normalizedTitle.isEmpty()) {
+            throw new IllegalArgumentException("Название задания не может быть пустым");
+        }
+        if (normalizedDescription == null || normalizedDescription.isEmpty()) {
+            throw new IllegalArgumentException("Описание задания не может быть пустым");
+        }
+        if (maxScore == null || maxScore <= 0) {
+            throw new IllegalArgumentException("maxScore должен быть положительным числом");
+        }
+
         Assignment assignment = new Assignment();
         assignment.setLesson(lesson);
-        assignment.setTitle(title);
-        assignment.setDescription(description);
+        assignment.setTitle(normalizedTitle);
+        assignment.setDescription(normalizedDescription);
         assignment.setDueDate(dueDate);
         assignment.setMaxScore(maxScore);
 

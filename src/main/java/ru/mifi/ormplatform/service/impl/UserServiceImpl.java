@@ -12,7 +12,6 @@ import java.util.Optional;
 
 /**
  * Реализация сервиса пользователей.
- * Здесь инкапсулирую работу с UserRepository и добавляю простую бизнес-логику.
  */
 @Service
 @Transactional
@@ -20,23 +19,43 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
 
-    /**
-     * Явный конструктор для внедрения зависимостей.
-     * Использую конструктор, чтобы не зависеть от Lombok.
-     *
-     * @param userRepository репозиторий пользователей.
-     */
     public UserServiceImpl(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
     @Override
     public User createUser(String name, String email, UserRole role) {
-        // На будущее сюда можно добавить проверку уникальности email и валидацию
+
+        // Проверка входных данных
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Имя пользователя не может быть пустым");
+        }
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email не может быть пустым");
+        }
+        if (!email.contains("@")) {
+            throw new IllegalArgumentException("Некорректный email: " + email);
+        }
+        if (role == null) {
+            throw new IllegalArgumentException("Роль пользователя не может быть null");
+        }
+
+        // Нормализация данных
+        String normalizedName = name.trim();
+        String normalizedEmail = email.trim().toLowerCase();
+
+        // Проверка уникальности email
+        if (userRepository.findByEmail(normalizedEmail).isPresent()) {
+            throw new IllegalStateException(
+                    "Пользователь с email=" + normalizedEmail + " уже существует");
+        }
+
+        // Создание пользователя
         User user = new User();
-        user.setName(name);
-        user.setEmail(email);
+        user.setName(normalizedName);
+        user.setEmail(normalizedEmail);
         user.setRole(role);
+
         return userRepository.save(user);
     }
 
@@ -49,7 +68,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
+        if (email == null) return Optional.empty();
+        return userRepository.findByEmail(email.trim().toLowerCase());
     }
 
     @Override
@@ -64,4 +84,3 @@ public class UserServiceImpl implements UserService {
         return userRepository.findAll();
     }
 }
-

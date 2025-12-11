@@ -24,8 +24,19 @@ public class TagServiceImpl implements TagService {
 
     @Override
     public Tag createTag(String name) {
+
+        // Нормализация строки
+        String normalized = name.trim();
+
+        // если тег уже существует — возвращаем его
+        Optional<Tag> existing = tagRepository.findByName(normalized);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
         Tag tag = new Tag();
-        tag.setName(name);
+        tag.setName(normalized);
+
         return tagRepository.save(tag);
     }
 

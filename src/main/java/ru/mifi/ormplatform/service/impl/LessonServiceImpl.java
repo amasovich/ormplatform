@@ -37,11 +37,24 @@ public class LessonServiceImpl implements LessonService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Модуль с id=" + moduleId + " не найден"));
 
+        // Нормализация
+        String normalizedTitle = title.trim();
+        String normalizedContent = content != null ? content.trim() : null;
+        String normalizedVideo = videoUrl != null ? videoUrl.trim() : null;
+
+        // Валидация
+        if (normalizedTitle.isEmpty()) {
+            throw new IllegalArgumentException("Название урока не может быть пустым");
+        }
+        if (normalizedContent == null || normalizedContent.isEmpty()) {
+            throw new IllegalArgumentException("Содержимое урока не может быть пустым");
+        }
+
         Lesson lesson = new Lesson();
         lesson.setModule(module);
-        lesson.setTitle(title);
-        lesson.setContent(content);
-        lesson.setVideoUrl(videoUrl);
+        lesson.setTitle(normalizedTitle);
+        lesson.setContent(normalizedContent);
+        lesson.setVideoUrl(normalizedVideo);
 
         return lessonRepository.save(lesson);
     }
