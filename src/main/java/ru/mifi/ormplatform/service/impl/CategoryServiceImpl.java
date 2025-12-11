@@ -11,6 +11,8 @@ import java.util.Optional;
 
 /**
  * Реализация сервиса категорий.
+ * <p>
+ * Содержит CRUD-операции и бизнес-валидацию по уникальности имён категорий.
  */
 @Service
 @Transactional
@@ -22,13 +24,19 @@ public class CategoryServiceImpl implements CategoryService {
         this.categoryRepository = categoryRepository;
     }
 
+    /**
+     * Создание новой категории.
+     * Если категория с таким именем уже существует — возвращается существующая.
+     */
     @Override
     public Category createCategory(String name) {
 
-        // Нормализация строки
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Название категории не может быть пустым");
+        }
+
         String normalized = name.trim();
 
-        // если такая категория уже существует — возвращаем её
         Optional<Category> existing = categoryRepository.findByName(normalized);
         if (existing.isPresent()) {
             return existing.get();
@@ -38,6 +46,33 @@ public class CategoryServiceImpl implements CategoryService {
         category.setName(normalized);
 
         return categoryRepository.save(category);
+    }
+
+    /**
+     * Обновление категории по id.
+     */
+    @Override
+    public Category updateCategory(Long id, String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Название категории не может быть пустым");
+        }
+
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Категория не найдена: " + id));
+
+        category.setName(name.trim());
+        return categoryRepository.save(category);
+    }
+
+    /**
+     * Удаление категории по id.
+     */
+    @Override
+    public void deleteCategory(Long id) {
+        if (!categoryRepository.existsById(id)) {
+            throw new IllegalArgumentException("Категория не найдена: " + id);
+        }
+        categoryRepository.deleteById(id);
     }
 
     @Override
@@ -51,5 +86,14 @@ public class CategoryServiceImpl implements CategoryService {
     public List<Category> findAll() {
         return categoryRepository.findAll();
     }
-}
 
+    /**
+     * Получение категории по id или исключение.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Category getByIdOrThrow(Long id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Категория не найдена: " + id));
+    }
+}

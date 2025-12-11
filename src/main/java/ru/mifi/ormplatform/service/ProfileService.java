@@ -1,8 +1,9 @@
 package ru.mifi.ormplatform.service;
 
 import ru.mifi.ormplatform.domain.entity.Profile;
+import ru.mifi.ormplatform.web.dto.ProfileUpdateRequestDto;
 
-import java.util.Optional;
+import java.util.List;
 
 /**
  * Сервис для работы с профилем пользователя.
@@ -10,27 +11,13 @@ import java.util.Optional;
 public interface ProfileService {
 
     /**
-     * Создать профиль для пользователя.
-     *
-     * @param userId ID пользователя.
-     * @param bio биография (описание).
-     * @param avatarUrl ссылка на аватар.
-     * @return созданный профиль.
+     * Получить профиль.
      */
-    Profile createProfile(Long userId, String bio, String avatarUrl);
+    Profile getByUserId(Long userId);
 
     /**
      * Обновление профиля.
      */
     Profile updateProfile(Long userId, String bio, String avatarUrl);
-
-    /**
-     * Получить профиль пользователя.
-     */
-    Optional<Profile> findByUserId(Long userId);
-
-    /**
-     * Получить или бросить исключение.
-     */
-    Profile getByUserIdOrThrow(Long userId);
 }
+

@@ -19,6 +19,22 @@ public interface CategoryService {
     Category createCategory(String name);
 
     /**
+     * Обновляю существующую категорию.
+     *
+     * @param id   идентификатор категории.
+     * @param name новое название.
+     * @return обновлённая категория.
+     */
+    Category updateCategory(Long id, String name);
+
+    /**
+     * Удаляю категорию по идентификатору.
+     *
+     * @param id идентификатор категории.
+     */
+    void deleteCategory(Long id);
+
+    /**
      * Нахожу категорию по названию.
      *
      * @param name название.
@@ -32,5 +48,12 @@ public interface CategoryService {
      * @return список категорий.
      */
     List<Category> findAll();
-}
 
+    /**
+     * Получаю категорию по id или выбрасываю исключение.
+     *
+     * @param id идентификатор категории.
+     * @return найденная категория.
+     */
+    Category getByIdOrThrow(Long id);
+}
