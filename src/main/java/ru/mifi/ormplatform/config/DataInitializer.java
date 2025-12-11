@@ -2,40 +2,27 @@ package ru.mifi.ormplatform.config;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-import ru.mifi.ormplatform.domain.entity.Assignment;
-import ru.mifi.ormplatform.domain.entity.Category;
-import ru.mifi.ormplatform.domain.entity.Course;
-import ru.mifi.ormplatform.domain.entity.Lesson;
+import ru.mifi.ormplatform.domain.entity.*;
 import ru.mifi.ormplatform.domain.entity.Module;
-import ru.mifi.ormplatform.domain.entity.Question;
-import ru.mifi.ormplatform.domain.entity.Quiz;
-import ru.mifi.ormplatform.domain.entity.Tag;
-import ru.mifi.ormplatform.domain.entity.User;
+import ru.mifi.ormplatform.domain.enums.EnrollmentStatus;
 import ru.mifi.ormplatform.domain.enums.QuestionType;
 import ru.mifi.ormplatform.domain.enums.UserRole;
-import ru.mifi.ormplatform.service.AssignmentService;
-import ru.mifi.ormplatform.service.CategoryService;
-import ru.mifi.ormplatform.service.CourseService;
-import ru.mifi.ormplatform.service.LessonService;
-import ru.mifi.ormplatform.service.ModuleService;
-import ru.mifi.ormplatform.service.QuestionService;
-import ru.mifi.ormplatform.service.QuizService;
-import ru.mifi.ormplatform.service.TagService;
-import ru.mifi.ormplatform.service.UserService;
+import ru.mifi.ormplatform.service.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * Инициализатор данных.
- * На старте приложения создаёт базовый набор пользователей, категорий, тегов,
- * курсов, модулей, уроков, заданий и квиза с вопросами.
- *
- * Это упрощает ручную проверку схемы и работу будущих REST-эндпоинтов.
+ * Создаёт базовый набор пользователей, профилей, курсов, модулей, уроков,
+ * заданий, квизов, вопросов, вариантов и тестовых прохождений.
  */
 @Component
 public class DataInitializer implements CommandLineRunner {
 
     private final UserService userService;
+    private final ProfileService profileService;
     private final CategoryService categoryService;
     private final TagService tagService;
     private final CourseService courseService;
@@ -44,11 +31,11 @@ public class DataInitializer implements CommandLineRunner {
     private final AssignmentService assignmentService;
     private final QuizService quizService;
     private final QuestionService questionService;
+    private final QuizSubmissionService quizSubmissionService;
+    private final EnrollmentService enrollmentService;
 
-    /**
-     * Конструктор с внедрением всех необходимых сервисов.
-     */
     public DataInitializer(UserService userService,
+                           ProfileService profileService,
                            CategoryService categoryService,
                            TagService tagService,
                            CourseService courseService,
@@ -56,8 +43,12 @@ public class DataInitializer implements CommandLineRunner {
                            LessonService lessonService,
                            AssignmentService assignmentService,
                            QuizService quizService,
-                           QuestionService questionService) {
+                           QuestionService questionService,
+                           QuizSubmissionService quizSubmissionService,
+                           EnrollmentService enrollmentService) {
+
         this.userService = userService;
+        this.profileService = profileService;
         this.categoryService = categoryService;
         this.tagService = tagService;
         this.courseService = courseService;
@@ -66,37 +57,55 @@ public class DataInitializer implements CommandLineRunner {
         this.assignmentService = assignmentService;
         this.quizService = quizService;
         this.questionService = questionService;
+        this.quizSubmissionService = quizSubmissionService;
+        this.enrollmentService = enrollmentService;
     }
 
     @Override
     public void run(String... args) {
-        // Простейшая защита от повторной инициализации:
+
         if (!userService.findAll().isEmpty()) {
             return;
         }
 
-        // 1. Пользователи
+        // ======================================================
+        // 1. USERS + PROFILES
+        // ======================================================
         User teacher = userService.createUser(
-                "ORM Mentor",
-                "teacher@example.com",
-                UserRole.TEACHER
+                "ORM Mentor", "teacher@example.com", UserRole.TEACHER
         );
+        profileService.updateProfile(teacher.getId(),
+                "Senior Java / ORM Mentor", "https://example.com/avatar-teacher.png");
 
-        User student = userService.createUser(
-                "First Student",
-                "student@example.com",
-                UserRole.STUDENT
+        User student1 = userService.createUser(
+                "First Student", "student@example.com", UserRole.STUDENT
         );
+        profileService.updateProfile(student1.getId(),
+                "Beginning Java Developer", "https://example.com/avatar-student1.png");
 
-        // 2. Категория
+        User student2 = userService.createUser(
+                "Second Student", "student2@example.com", UserRole.STUDENT
+        );
+        profileService.updateProfile(student2.getId(),
+                "Junior Java Enthusiast", "https://example.com/avatar-student2.png");
+
+        // ======================================================
+        // 2. CATEGORY
+        // ======================================================
         Category category = categoryService.createCategory("Java / ORM / Hibernate");
 
-        // 3. Теги
+        // ======================================================
+        // 3. TAGS
+        // ======================================================
         Tag tagJpa = tagService.createTag("JPA");
         Tag tagHibernate = tagService.createTag("Hibernate");
         Tag tagSpringData = tagService.createTag("Spring Data JPA");
+        Tag tagQuery = tagService.createTag("HQL");
+        Tag tagPerformance = tagService.createTag("Performance Tuning");
 
-        // 4. Курс
+        // ======================================================
+        // 4. COURSE
+        // ======================================================
         Course course = courseService.createCourse(
                 "Практический курс по ORM и Hibernate",
                 "Учебная платформа по ORM и Hibernate на Spring Boot.",
@@ -106,12 +115,13 @@ public class DataInitializer implements CommandLineRunner {
                 LocalDate.now()
         );
 
-        // Привязываю теги к курсу
         courseService.addTagToCourse(course.getId(), tagJpa.getId());
         courseService.addTagToCourse(course.getId(), tagHibernate.getId());
         courseService.addTagToCourse(course.getId(), tagSpringData.getId());
 
-        // 5. Модуль
+        // ======================================================
+        // 5. MODULE
+        // ======================================================
         Module module1 = moduleService.createModule(
                 course.getId(),
                 "Введение в ORM и JPA",
@@ -119,34 +129,37 @@ public class DataInitializer implements CommandLineRunner {
                 "Основные понятия ORM, JPA и Hibernate."
         );
 
-        // 6. Уроки
+        // ======================================================
+        // 6. LESSONS
+        // ======================================================
         Lesson lesson1 = lessonService.createLesson(
                 module1.getId(),
                 "Что такое ORM и зачем оно нужно",
-                "В этом уроке я кратко объясняю идею ORM: маппинг объектов " +
-                        "на строки таблиц БД, преимущества и типичные подводные камни.",
+                "Идея ORM, преимущества и типичные подводные камни.",
                 null
         );
 
         Lesson lesson2 = lessonService.createLesson(
                 module1.getId(),
                 "JPA как спецификация и Hibernate как её реализация",
-                "В этом уроке разбираю разницу между JPA (спецификация) и " +
-                        "конкретными реализациями, включая Hibernate и Spring Data JPA.",
+                "Разница между JPA и конкретными реализациями.",
                 null
         );
 
-        // 7. Практическое задание к уроку 2
-        assignmentService.createAssignment(
+        // ======================================================
+        // 7. ASSIGNMENTS
+        // ======================================================
+        Assignment ass1 = assignmentService.createAssignment(
                 lesson2.getId(),
                 "Поднять простой проект на Spring Data JPA",
-                "Нужно создать базовый проект Spring Boot с одной сущностью и " +
-                        "реализовать CRUD-операции через Spring Data JPA.",
-                null,
+                "Создать базовый проект Spring Boot с сущностью и CRUD.",
+                LocalDate.now().plusDays(7),
                 10
         );
 
-        // 8. Квиз по модулю
+        // ======================================================
+        // 8. QUIZ
+        // ======================================================
         Quiz quiz = quizService.createQuiz(
                 course.getId(),
                 module1.getId(),
@@ -154,53 +167,64 @@ public class DataInitializer implements CommandLineRunner {
                 15
         );
 
-        // 9. Вопросы и варианты ответов
+        // ======================================================
+        // 9. QUESTIONS + ANSWERS
+        // ------------------------------------------------------
         Question q1 = questionService.createQuestion(
                 quiz.getId(),
-                "Что делает ORM-фреймворк в контексте приложения?",
+                "Что делает ORM-фреймворк?",
                 QuestionType.SINGLE_CHOICE
         );
-
-        questionService.addAnswerOption(
-                q1.getId(),
-                "Автоматизирует маппинг объектов Java на строки таблиц БД и обратно.",
-                true
-        );
-        questionService.addAnswerOption(
-                q1.getId(),
-                "Компилирует Java-код в байт-код JVM.",
-                false
-        );
-        questionService.addAnswerOption(
-                q1.getId(),
-                "Управляет транзакциями операционной системы.",
-                false
-        );
+        questionService.addAnswerOption(q1.getId(),
+                "Автоматизирует маппинг объектов Java и таблиц БД.", true);
+        questionService.addAnswerOption(q1.getId(),
+                "Компилирует Java-код.", false);
+        questionService.addAnswerOption(q1.getId(),
+                "Управляет драйверами ОС.", false);
 
         Question q2 = questionService.createQuestion(
                 quiz.getId(),
-                "Выберите корректные утверждения о JPA.",
+                "Выберите верные утверждения о JPA",
                 QuestionType.MULTIPLE_CHOICE
         );
+        questionService.addAnswerOption(q2.getId(),
+                "JPA — спецификация ORM в Java.", true);
+        questionService.addAnswerOption(q2.getId(),
+                "Hibernate — реализация JPA.", true);
+        questionService.addAnswerOption(q2.getId(),
+                "JPA — драйвер PostgreSQL.", false);
 
-        questionService.addAnswerOption(
-                q2.getId(),
-                "JPA — это спецификация, описывающая API для работы с ORM в Java.",
-                true
-        );
-        questionService.addAnswerOption(
-                q2.getId(),
-                "Hibernate является одной из реализаций JPA.",
-                true
-        );
-        questionService.addAnswerOption(
-                q2.getId(),
-                "JPA — это драйвер базы данных PostgreSQL.",
-                false
+        // ======================================================
+        // 10. ENROLLMENT
+        // ======================================================
+        enrollmentService.enrollStudent(course.getId(), student1.getId());
+        Enrollment enrollment2 =
+                enrollmentService.enrollStudent(course.getId(), student2.getId());
+        enrollmentService.updateStatus(enrollment2.getId(), EnrollmentStatus.ACTIVE);
+
+        // ======================================================
+        // 11. QUIZ SUBMISSION (пример)
+        // ======================================================
+        quizSubmissionService.evaluateAndSaveSubmission(
+                quiz.getId(),
+                student1.getId(),
+                Map.of(
+                        q1.getId(), q1.getOptions().get(0).getId(),
+                        q2.getId(), q2.getOptions().get(0).getId()
+                ),
+                LocalDateTime.now()
         );
 
-        // На этом базовая структура данных для учебного стенда сформирована.
+        // ======================================================
+        // 12. COURSE REVIEW
+        // ======================================================
+        CourseReview review = new CourseReview();
+        review.setCourse(course);
+        review.setStudent(student1);
+        review.setRating(5);
+        review.setComment("Отличный курс, всё понятно!");
+        review.setCreatedAt(LocalDateTime.now());
 
+        // Будет сохранён JPA каскадом или можно вызвать сервис при необходимости
     }
 }
-
