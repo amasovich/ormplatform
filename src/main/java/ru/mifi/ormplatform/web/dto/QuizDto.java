@@ -3,15 +3,13 @@ package ru.mifi.ormplatform.web.dto;
 import java.util.List;
 
 /**
- * Полное представление квиза с вопросами и вариантами ответов.
+ * Полное представление квиза:
+ * включает метаданные, список вопросов и варианты ответов.
  */
 public class QuizDto {
 
     private Long id;
     private String title;
-    /**
-     * Лимит времени на прохождение квиза в минутах.
-     */
     private Integer timeLimit;
 
     private Long courseId;

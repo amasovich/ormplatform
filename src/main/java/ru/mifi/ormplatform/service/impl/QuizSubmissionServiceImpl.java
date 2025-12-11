@@ -13,6 +13,7 @@ import ru.mifi.ormplatform.service.QuizSubmissionService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Реализация сервиса для работы с результатами прохождения квизов.
@@ -90,4 +91,57 @@ public class QuizSubmissionServiceImpl implements QuizSubmissionService {
     public List<QuizSubmission> findByStudent(Long studentId) {
         return quizSubmissionRepository.findAllByStudent_Id(studentId);
     }
+
+    @Override
+    public QuizSubmission evaluateAndSaveSubmission(Long quizId,
+                                                    Long studentId,
+                                                    Map<Long, Long> answers,
+                                                    LocalDateTime takenAt) {
+
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new IllegalArgumentException("Квиз не найден: " + quizId));
+
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден: " + studentId));
+
+        if (student.getRole() != UserRole.STUDENT) {
+            throw new IllegalStateException("Только студент может проходить квиз");
+        }
+
+        // Запрет повторного прохождения
+        boolean alreadyPassed = quizSubmissionRepository.findAllByStudent_Id(studentId)
+                .stream()
+                .anyMatch(s -> s.getQuiz().getId().equals(quizId));
+
+        if (alreadyPassed) {
+            throw new IllegalStateException("Студент уже проходил этот квиз");
+        }
+
+        int score = 0;
+
+        if (quiz.getQuestions() != null) {
+            for (var question : quiz.getQuestions()) {
+
+                Long selectedOptionId = answers.get(question.getId());
+                if (selectedOptionId == null) continue;
+
+                if (question.getOptions() == null) continue;
+
+                boolean correct = question.getOptions()
+                        .stream()
+                        .anyMatch(o -> o.getId().equals(selectedOptionId) && o.isCorrect());
+
+                if (correct) score++;
+            }
+        }
+
+        QuizSubmission submission = new QuizSubmission();
+        submission.setQuiz(quiz);
+        submission.setStudent(student);
+        submission.setScore(score);
+        submission.setTakenAt(takenAt != null ? takenAt : LocalDateTime.now());
+
+        return quizSubmissionRepository.save(submission);
+    }
+
 }

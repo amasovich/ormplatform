@@ -1,20 +1,14 @@
 package ru.mifi.ormplatform.web.dto;
 
-public class AnswerOptionDto {
+/**
+ * DTO для создания варианта ответа.
+ */
+public class AnswerOptionCreateRequestDto {
 
-    private Long id;
     private String text;
     private boolean correct;
 
-    public AnswerOptionDto() {
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
+    public AnswerOptionCreateRequestDto() {
     }
 
     public String getText() {

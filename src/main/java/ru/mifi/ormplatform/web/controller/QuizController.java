@@ -6,68 +6,116 @@ import ru.mifi.ormplatform.domain.entity.AnswerOption;
 import ru.mifi.ormplatform.domain.entity.Question;
 import ru.mifi.ormplatform.domain.entity.Quiz;
 import ru.mifi.ormplatform.domain.entity.QuizSubmission;
+import ru.mifi.ormplatform.service.QuestionService;
 import ru.mifi.ormplatform.service.QuizService;
 import ru.mifi.ormplatform.service.QuizSubmissionService;
-import ru.mifi.ormplatform.web.dto.QuizDto;
-import ru.mifi.ormplatform.web.dto.QuizSubmissionDto;
-import ru.mifi.ormplatform.web.dto.QuizSubmissionRequestDto;
-import ru.mifi.ormplatform.web.dto.QuizSummaryDto;
+import ru.mifi.ormplatform.web.dto.*;
 import ru.mifi.ormplatform.web.mapper.QuizMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * REST-контроллер для работы с квизами и отправкой ответов.
+ * REST-контроллер для работы с квизами, вопросами и результатами прохождения.
+ * <p>
+ * Содержит:
+ * – CRUD для квизов;
+ * – CRUD для вопросов и вариантов ответов;
+ * – отправку попытки прохождения квиза;
+ * – получение результатов.
  */
 @RestController
 @RequestMapping("/api")
 public class QuizController {
 
     private final QuizService quizService;
+    private final QuestionService questionService;
     private final QuizSubmissionService quizSubmissionService;
     private final QuizMapper quizMapper;
 
     public QuizController(QuizService quizService,
+                          QuestionService questionService,
                           QuizSubmissionService quizSubmissionService,
                           QuizMapper quizMapper) {
         this.quizService = quizService;
+        this.questionService = questionService;
         this.quizSubmissionService = quizSubmissionService;
         this.quizMapper = quizMapper;
     }
 
+    // -----------------------------------------------------------------------
+    //                               QUIZ CRUD
+    // -----------------------------------------------------------------------
+
     /**
-     * Получаю список квизов по курсу.
-     * Здесь можно использовать либо QuizDto, либо ваш уже существующий QuizSummaryDto.
+     * Создаю новый квиз внутри курса и модуля.
      *
-     * @param courseId идентификатор курса
-     * @return список квизов курса
+     * POST /api/courses/{courseId}/modules/{moduleId}/quizzes
      */
-    @GetMapping("/courses/{courseId}/quizzes")
-    public ResponseEntity<List<QuizDto>> getQuizzesByCourse(@PathVariable Long courseId) {
-        List<Quiz> quizzes = quizService.findByCourse(courseId);
+    @PostMapping("/courses/{courseId}/modules/{moduleId}/quizzes")
+    public ResponseEntity<QuizDto> createQuiz(
+            @PathVariable Long courseId,
+            @PathVariable Long moduleId,
+            @RequestBody QuizCreateRequestDto request
+    ) {
 
-        List<QuizDto> result = quizzes.stream()
-                .map(quizMapper::toQuizDto)
-                .collect(Collectors.toList());
+        Quiz quiz = quizService.createQuiz(
+                courseId,
+                moduleId,
+                request.getTitle(),
+                request.getTimeLimit()
+        );
 
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(quizMapper.toQuizDto(quiz));
     }
 
-//    @GetMapping("/courses/{courseId}/quizzes")
-//    public List<QuizSummaryDto> getQuizzesForCourse(@PathVariable Long courseId) {
-//        List<Quiz> quizzes = quizService.getQuizzesByCourse(courseId);
-//        return quizMapper.toSummaryDtoList(quizzes);
-//    }
+    /**
+     * Обновляю существующий квиз.
+     *
+     * PUT /api/quizzes/{id}
+     */
+    @PutMapping("/quizzes/{id}")
+    public ResponseEntity<QuizDto> updateQuiz(
+            @PathVariable Long id,
+            @RequestBody QuizUpdateRequestDto request
+    ) {
+        Quiz quiz = quizService.updateQuiz(id, request.getTitle(), request.getTimeLimit());
+        return ResponseEntity.ok(quizMapper.toQuizDto(quiz));
+    }
 
+    /**
+     * Удаляю квиз.
+     *
+     * DELETE /api/quizzes/{id}
+     */
+    @DeleteMapping("/quizzes/{id}")
+    public ResponseEntity<Void> deleteQuiz(@PathVariable Long id) {
+        quizService.deleteQuiz(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Получаю список всех квизов курса.
+     *
+     * GET /api/courses/{courseId}/quizzes
+     */
+    @GetMapping("/courses/{courseId}/quizzes")
+    public ResponseEntity<List<QuizSummaryDto>> getQuizzesByCourse(@PathVariable Long courseId) {
+
+        List<Quiz> quizzes = quizService.findByCourse(courseId);
+
+        List<QuizSummaryDto> dto = quizzes.stream()
+                .map(quizMapper::toQuizSummaryDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(dto);
+    }
 
     /**
      * Получаю один квиз с вопросами и вариантами ответов.
      *
-     * @param quizId идентификатор квиза
-     * @return детальное описание квиза
+     * GET /api/quizzes/{quizId}
      */
     @GetMapping("/quizzes/{quizId}")
     public ResponseEntity<QuizDto> getQuiz(@PathVariable Long quizId) {
@@ -77,28 +125,95 @@ public class QuizController {
         return ResponseEntity.ok(quizMapper.toQuizDto(quiz));
     }
 
+    // -----------------------------------------------------------------------
+    //            QUESTIONS — создание / удаление / добавление вариантов
+    // -----------------------------------------------------------------------
+
     /**
-     * Отправка ответов студента на квиз.
-     * Подсчёт score происходит на основе правильных вариантов в БД.
+     * Добавляю вопрос в квиз.
      *
-     * @param quizId  идентификатор квиза
-     * @param request ответы студента
-     * @return сохранённый результат прохождения квиза
+     * POST /api/quizzes/{quizId}/questions
+     */
+    @PostMapping("/quizzes/{quizId}/questions")
+    public ResponseEntity<QuestionDto> addQuestion(
+            @PathVariable Long quizId,
+            @RequestBody QuestionCreateRequestDto request
+    ) {
+
+        Question question = questionService.createQuestion(
+                quizId,
+                request.getText(),
+                request.getType()
+        );
+
+        return ResponseEntity.ok(quizMapper.toQuestionDto(question));
+    }
+
+    /**
+     * Удалить вопрос из квиза.
+     *
+     * DELETE /api/questions/{id}
+     */
+    @DeleteMapping("/questions/{id}")
+    public ResponseEntity<Void> deleteQuestion(@PathVariable Long id) {
+        questionService.deleteQuestion(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // -----------------------------------------------------------------------
+    //                       ANSWER OPTIONS — CRUD
+    // -----------------------------------------------------------------------
+
+    /**
+     * Добавляю вариант ответа к вопросу.
+     *
+     * POST /api/questions/{questionId}/options
+     */
+    @PostMapping("/questions/{questionId}/options")
+    public ResponseEntity<AnswerOptionDto> addAnswerOption(
+            @PathVariable Long questionId,
+            @RequestBody AnswerOptionCreateRequestDto request
+    ) {
+
+        AnswerOption option = questionService.addAnswerOption(
+                questionId,
+                request.getText(),
+                request.isCorrect()
+        );
+
+        return ResponseEntity.ok(quizMapper.toAnswerOptionDto(option));
+    }
+
+    /**
+     * Удаляю вариант ответа.
+     *
+     * DELETE /api/answer-options/{id}
+     */
+    @DeleteMapping("/answer-options/{id}")
+    public ResponseEntity<Void> deleteAnswerOption(@PathVariable Long id) {
+        questionService.deleteAnswerOption(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // -----------------------------------------------------------------------
+    //                        SUBMISSIONS (прохождение квиза)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Студент отправляет ответы на квиз.
+     * Подсчёт результата вынесен в сервис.
+     *
+     * POST /api/quizzes/{quizId}/submissions
      */
     @PostMapping("/quizzes/{quizId}/submissions")
     public ResponseEntity<QuizSubmissionDto> submitQuiz(
             @PathVariable Long quizId,
             @RequestBody QuizSubmissionRequestDto request
     ) {
-        Quiz quiz = quizService.findById(quizId)
-                .orElseThrow(() -> new IllegalArgumentException("Квиз не найден: " + quizId));
-
-        int score = calculateScore(quiz, request.getAnswers());
-
-        QuizSubmission submission = quizSubmissionService.createSubmission(
+        QuizSubmission submission = quizSubmissionService.evaluateAndSaveSubmission(
                 quizId,
                 request.getStudentId(),
-                score,
+                request.getAnswers(),
                 LocalDateTime.now()
         );
 
@@ -106,71 +221,38 @@ public class QuizController {
     }
 
     /**
-     * Список результатов по конкретному квизу.
+     * Список всех результатов по квизу.
      *
-     * @param quizId идентификатор квиза
-     * @return список попыток прохождения этого квиза
+     * GET /api/quizzes/{quizId}/submissions
      */
     @GetMapping("/quizzes/{quizId}/submissions")
-    public ResponseEntity<List<QuizSubmissionDto>> getSubmissionsByQuiz(@PathVariable Long quizId) {
+    public ResponseEntity<List<QuizSubmissionDto>> getSubmissionsByQuiz(
+            @PathVariable Long quizId) {
+
         List<QuizSubmission> submissions = quizSubmissionService.findByQuiz(quizId);
 
-        List<QuizSubmissionDto> result = submissions.stream()
+        List<QuizSubmissionDto> dto = submissions.stream()
                 .map(quizMapper::toQuizSubmissionDto)
                 .collect(Collectors.toList());
 
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(dto);
     }
 
     /**
-     * Все результаты квизов для конкретного студента.
+     * Список всех результатов студента.
      *
-     * @param studentId идентификатор студента
-     * @return список всех попыток студента по квизам
+     * GET /api/students/{studentId}/quiz-submissions
      */
     @GetMapping("/students/{studentId}/quiz-submissions")
-    public ResponseEntity<List<QuizSubmissionDto>> getSubmissionsByStudent(@PathVariable Long studentId) {
+    public ResponseEntity<List<QuizSubmissionDto>> getSubmissionsByStudent(
+            @PathVariable Long studentId) {
+
         List<QuizSubmission> submissions = quizSubmissionService.findByStudent(studentId);
 
-        List<QuizSubmissionDto> result = submissions.stream()
+        List<QuizSubmissionDto> dto = submissions.stream()
                 .map(quizMapper::toQuizSubmissionDto)
                 .collect(Collectors.toList());
 
-        return ResponseEntity.ok(result);
-    }
-
-    /**
-     * Подсчёт количества правильных ответов.
-     *
-     * @param quiz    квиз с вопросами и вариантами
-     * @param answers карта "id вопроса → id выбранного варианта"
-     * @return количество правильных ответов
-     */
-    private int calculateScore(Quiz quiz, Map<Long, Long> answers) {
-        if (quiz.getQuestions() == null || answers == null || answers.isEmpty()) {
-            return 0;
-        }
-
-        int score = 0;
-
-        for (Question question : quiz.getQuestions()) {
-            Long selectedOptionId = answers.get(question.getId());
-            if (selectedOptionId == null) {
-                continue;
-            }
-
-            if (question.getOptions() == null) {
-                continue;
-            }
-
-            for (AnswerOption option : question.getOptions()) {
-                if (option.getId().equals(selectedOptionId) && option.isCorrect()) {
-                    score++;
-                    break;
-                }
-            }
-        }
-
-        return score;
+        return ResponseEntity.ok(dto);
     }
 }

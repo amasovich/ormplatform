@@ -7,57 +7,60 @@ import ru.mifi.ormplatform.web.dto.AssignmentDto;
 import ru.mifi.ormplatform.web.dto.SubmissionDto;
 
 /**
- * Маппер между сущностями заданий/решений и их DTO.
- * <p>
- * Здесь я собираю только те поля, которые действительно нужны REST-клиенту,
- * и не «вываливаю» наружу всю JPA-сущность целиком.
+ * Маппер между сущностями Assignment / Submission и DTO слоя.
+ * Явно контролирует, какие данные выходят наружу.
  */
 @Component
 public class AssignmentMapper {
 
     /**
-     * Преобразую сущность задания в DTO.
+     * Преобразование JPA-сущности Assignment → AssignmentDto.
      *
-     * @param assignment исходная JPA-сущность.
-     * @return DTO для ответа контроллера.
+     * @param assignment сущность задания
+     * @return DTO с безопасным набором полей
      */
     public AssignmentDto toDto(Assignment assignment) {
         AssignmentDto dto = new AssignmentDto();
+
         dto.setId(assignment.getId());
-        if (assignment.getLesson() != null) {
-            dto.setLessonId(assignment.getLesson().getId());
-        }
         dto.setTitle(assignment.getTitle());
         dto.setDescription(assignment.getDescription());
         dto.setDueDate(assignment.getDueDate());
         dto.setMaxScore(assignment.getMaxScore());
+
+        if (assignment.getLesson() != null) {
+            dto.setLessonId(assignment.getLesson().getId());
+        }
+
         return dto;
     }
 
     /**
-     * Преобразую сущность отправленного решения в DTO.
+     * Преобразование JPA-сущности Submission → SubmissionDto.
      *
-     * @param submission исходная JPA-сущность.
-     * @return DTO для ответа контроллера.
+     * @param submission сущность отправленного решения
+     * @return DTO с метаданными отправки и оценки
      */
     public SubmissionDto toDto(Submission submission) {
         SubmissionDto dto = new SubmissionDto();
-        dto.setId(submission.getId());
 
+        dto.setId(submission.getId());
+        dto.setSubmittedAt(submission.getSubmittedAt());
+        dto.setContent(submission.getContent());
+        dto.setScore(submission.getScore());
+        dto.setFeedback(submission.getFeedback());
+
+        // Assignment fields
         if (submission.getAssignment() != null) {
             dto.setAssignmentId(submission.getAssignment().getId());
             dto.setAssignmentTitle(submission.getAssignment().getTitle());
         }
 
+        // Student fields
         if (submission.getStudent() != null) {
             dto.setStudentId(submission.getStudent().getId());
             dto.setStudentName(submission.getStudent().getName());
         }
-
-        dto.setSubmittedAt(submission.getSubmittedAt());
-        dto.setContent(submission.getContent());
-        dto.setScore(submission.getScore());
-        dto.setFeedback(submission.getFeedback());
 
         return dto;
     }

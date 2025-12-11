@@ -7,144 +7,121 @@ import ru.mifi.ormplatform.domain.entity.Quiz;
 import ru.mifi.ormplatform.domain.entity.QuizSubmission;
 import ru.mifi.ormplatform.web.dto.*;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.stream.Collectors;
 
-/**
- * Маппер между сущностями квизов и DTO.
- */
 @Component
 public class QuizMapper {
 
     /**
-     * Преобразую сущность Quiz в DTO с вложенными вопросами и вариантами.
-     *
-     * @param quiz сущность квиза
-     * @return DTO квиза для REST-слоя
+     * Полное описание квиза со списком вопросов.
      */
     public QuizDto toQuizDto(Quiz quiz) {
-        if (quiz == null) {
-            return null;
-        }
-
         QuizDto dto = new QuizDto();
+
         dto.setId(quiz.getId());
         dto.setTitle(quiz.getTitle());
         dto.setTimeLimit(quiz.getTimeLimit());
 
-        if (quiz.getCourse() != null) {
-            dto.setCourseId(quiz.getCourse().getId());
-        }
         if (quiz.getModule() != null) {
             dto.setModuleId(quiz.getModule().getId());
+
+            if (quiz.getModule().getCourse() != null) {
+                dto.setCourseId(quiz.getModule().getCourse().getId());
+            }
         }
 
-        if (quiz.getQuestions() != null) {
-            List<QuestionDto> questionDtos = quiz.getQuestions()
-                    .stream()
-                    .map(this::toQuestionDto)
-                    .collect(Collectors.toList());
-            dto.setQuestions(questionDtos);
-        }
+        dto.setQuestions(
+                quiz.getQuestions() == null
+                        ? Collections.emptyList()
+                        : quiz.getQuestions().stream()
+                        .map(this::toQuestionDto)
+                        .collect(Collectors.toList())
+        );
 
         return dto;
     }
 
     /**
-     * Маппинг вопроса квиза.
-     *
-     * @param question сущность вопроса
-     * @return DTO вопроса
+     * Краткое описание квиза для списков.
      */
-    public QuestionDto toQuestionDto(Question question) {
-        if (question == null) {
-            return null;
+    public QuizSummaryDto toQuizSummaryDto(Quiz quiz) {
+        QuizSummaryDto dto = new QuizSummaryDto();
+
+        dto.setId(quiz.getId());
+        dto.setTitle(quiz.getTitle());
+        dto.setTimeLimit(quiz.getTimeLimit());
+
+        if (quiz.getModule() != null) {
+            dto.setModuleId(quiz.getModule().getId());
+
+            if (quiz.getModule().getCourse() != null) {
+                dto.setCourseId(quiz.getModule().getCourse().getId());
+            }
         }
 
-        QuestionDto dto = new QuestionDto();
-        dto.setId(question.getId());
-        dto.setText(question.getText());
-        dto.setType(question.getType() != null ? question.getType().name() : null);
+        int questionCount = quiz.getQuestions() == null ? 0 : quiz.getQuestions().size();
+        dto.setQuestionCount(questionCount);
 
-        if (question.getOptions() != null) {
-            List<AnswerOptionDto> options = question.getOptions()
-                    .stream()
-                    .map(this::toAnswerOptionDto)
-                    .collect(Collectors.toList());
-            dto.setOptions(options);
-        }
+        int maxScore = quiz.getQuestions() == null ? 0 :
+                (int) quiz.getQuestions().stream()
+                        .flatMap(q ->
+                                q.getOptions() == null ? Collections.<AnswerOption>emptyList().stream()
+                                        : q.getOptions().stream()
+                        )
+                        .filter(AnswerOption::isCorrect)
+                        .count();
+
+        dto.setMaxScore(maxScore);
 
         return dto;
     }
 
     /**
-     * Маппинг одного варианта ответа.
-     *
-     * @param answerOption сущность варианта
-     * @return DTO варианта ответа
-     */
-    public AnswerOptionDto toAnswerOptionDto(AnswerOption answerOption) {
-        if (answerOption == null) {
-            return null;
-        }
-
-        AnswerOptionDto dto = new AnswerOptionDto();
-        dto.setId(answerOption.getId());
-        dto.setText(answerOption.getText());
-        return dto;
-    }
-
-    /**
-     * Маппинг результата прохождения квиза.
-     *
-     * @param submission сущность результата
-     * @return DTO результата
+     * Результат прохождения квиза.
      */
     public QuizSubmissionDto toQuizSubmissionDto(QuizSubmission submission) {
-        if (submission == null) {
-            return null;
-        }
-
         QuizSubmissionDto dto = new QuizSubmissionDto();
+
         dto.setId(submission.getId());
-
-        if (submission.getQuiz() != null) {
-            dto.setQuizId(submission.getQuiz().getId());
-            dto.setQuizTitle(submission.getQuiz().getTitle());
-        }
-
-        if (submission.getStudent() != null) {
-            dto.setStudentId(submission.getStudent().getId());
-            dto.setStudentName(submission.getStudent().getName());
-        }
-
+        dto.setQuizId(submission.getQuiz().getId());
+        dto.setQuizTitle(submission.getQuiz().getTitle());
+        dto.setStudentId(submission.getStudent().getId());
+        dto.setStudentName(submission.getStudent().getName());
         dto.setScore(submission.getScore());
         dto.setTakenAt(submission.getTakenAt());
 
         return dto;
     }
 
-    public QuizSummaryDto toSummaryDto(Quiz quiz) {
-        if (quiz == null) {
-            return null;
-        }
-        QuizSummaryDto dto = new QuizSummaryDto();
-        dto.setId(quiz.getId());
-        dto.setTitle(quiz.getTitle());
-        dto.setTimeLimit(quiz.getTimeLimit());
-        dto.setCourseId(
-                quiz.getCourse() != null ? quiz.getCourse().getId() : null
+    /**
+     * Вопрос квиза.
+     */
+    public QuestionDto toQuestionDto(Question question) {
+        QuestionDto dto = new QuestionDto();
+        dto.setId(question.getId());
+        dto.setText(question.getText());
+        dto.setType(question.getType()); // Экспортируем enum прямо
+
+        dto.setOptions(
+                question.getOptions().stream()
+                        .map(this::toAnswerOptionDto)
+                        .collect(Collectors.toList())
         );
-        dto.setModuleId(
-                quiz.getModule() != null ? quiz.getModule().getId() : null
-        );
+
         return dto;
     }
 
-    public List<QuizSummaryDto> toSummaryDtoList(List<Quiz> quizzes) {
-        return quizzes.stream()
-                .map(this::toSummaryDto)
-                .toList();
-    }
+    /**
+     * Вариант ответа.
+     */
+    public AnswerOptionDto toAnswerOptionDto(AnswerOption option) {
+        AnswerOptionDto dto = new AnswerOptionDto();
 
+        dto.setId(option.getId());
+        dto.setText(option.getText());
+        dto.setCorrect(option.isCorrect());
+
+        return dto;
+    }
 }

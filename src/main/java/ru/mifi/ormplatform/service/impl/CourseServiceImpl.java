@@ -129,5 +129,20 @@ public class CourseServiceImpl implements CourseService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Курс с id=" + id + " не найден"));
     }
+
+    @Override
+    public Course save(Course course) {
+        return courseRepository.save(course);
+    }
+
+    @Override
+    public void delete(Long id) {
+        Course course = courseRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Курс с id=" + id + " не найден"));
+
+        courseRepository.delete(course);
+    }
+
 }
 

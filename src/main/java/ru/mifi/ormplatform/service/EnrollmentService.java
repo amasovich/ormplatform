@@ -1,8 +1,10 @@
 package ru.mifi.ormplatform.service;
 
 import ru.mifi.ormplatform.domain.entity.Enrollment;
+import ru.mifi.ormplatform.domain.enums.EnrollmentStatus;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Сервис для управления записями студентов на курсы.
@@ -33,4 +35,29 @@ public interface EnrollmentService {
      * @return список Enrollment.
      */
     List<Enrollment> findByCourse(Long courseId);
+
+    /**
+     * Ищу запись по идентификатору.
+     *
+     * @param id идентификатор записи.
+     * @return Optional с записью, если найдена.
+     */
+    Optional<Enrollment> findById(Long id);
+
+    /**
+     * Обновляю статус записи.
+     *
+     * @param id идентификатор записи.
+     * @param status новый статус.
+     * @return обновлённая запись.
+     */
+    Enrollment updateStatus(Long id, EnrollmentStatus status);
+
+    /**
+     * Удаляю запись студента на курс (отписываю).
+     *
+     * @param id идентификатор записи.
+     */
+    void delete(Long id);
+
 }

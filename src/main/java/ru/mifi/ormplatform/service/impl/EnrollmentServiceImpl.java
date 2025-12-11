@@ -81,4 +81,30 @@ public class EnrollmentServiceImpl implements EnrollmentService {
     public List<Enrollment> findByCourse(Long courseId) {
         return enrollmentRepository.findAllByCourse_Id(courseId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Enrollment> findById(Long id) {
+        return enrollmentRepository.findById(id);
+    }
+
+    @Override
+    public Enrollment updateStatus(Long id, EnrollmentStatus status) {
+        Enrollment enrollment = enrollmentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Запись enrollment с id=" + id + " не найдена"));
+
+        enrollment.setStatus(status);
+        return enrollmentRepository.save(enrollment);
+    }
+
+    @Override
+    public void delete(Long id) {
+        Enrollment enrollment = enrollmentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Запись enrollment с id=" + id + " не найдена"));
+
+        enrollmentRepository.delete(enrollment);
+    }
+
 }

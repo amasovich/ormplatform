@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class QuizSubmissionDto {
 
     private Long id;
+
     private Long quizId;
     private String quizTitle;
 

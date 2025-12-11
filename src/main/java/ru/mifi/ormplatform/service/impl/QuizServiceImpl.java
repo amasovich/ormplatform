@@ -91,4 +91,24 @@ public class QuizServiceImpl implements QuizService {
                 .map(Optional::get)
                 .toList();
     }
+
+    @Override
+    public Quiz updateQuiz(Long id, String title, Integer timeLimitMinutes) {
+        Quiz quiz = quizRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Квиз с id=" + id + " не найден"));
+
+        quiz.setTitle(title);
+        quiz.setTimeLimit(timeLimitMinutes);
+
+        return quizRepository.save(quiz);
+    }
+
+    @Override
+    public void deleteQuiz(Long id) {
+        if (!quizRepository.existsById(id)) {
+            throw new IllegalArgumentException("Квиз с id=" + id + " не найден");
+        }
+        quizRepository.deleteById(id);
+    }
+
 }

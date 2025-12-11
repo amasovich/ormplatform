@@ -2,30 +2,25 @@ package ru.mifi.ormplatform.web.dto;
 
 /**
  * Краткое представление квиза.
- * Использую для списков по модулю / курсу.
+ * Используется для списков по курсу/модулю.
  */
 public class QuizSummaryDto {
 
     private Long id;
     private Long courseId;
     private Long moduleId;
-    private String title;
 
-    /**
-     * Лимит времени в минутах (может быть null, если не задан).
-     */
+    private String title;
     private Integer timeLimit;
 
-    /**
-     * Количество вопросов в квизе.
-     */
+    /** Количество вопросов в квизе */
     private Integer questionCount;
 
-    /**
-     * Максимально возможный балл за квиз.
-     * (суммарное количество правильных вариантов по всем вопросам).
-     */
+    /** Максимальный возможный балл */
     private Integer maxScore;
+
+    public QuizSummaryDto() {
+    }
 
     public Long getId() {
         return id;

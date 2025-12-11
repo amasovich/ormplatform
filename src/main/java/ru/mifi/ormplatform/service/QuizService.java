@@ -23,4 +23,9 @@ public interface QuizService {
     Optional<Quiz> findByModule(Long moduleId);
 
     List<Quiz> findByCourse(Long courseId);
+
+    Quiz updateQuiz(Long id, String title, Integer timeLimitMinutes);
+
+    void deleteQuiz(Long id);
+
 }

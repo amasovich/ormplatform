@@ -1,15 +1,20 @@
 package ru.mifi.ormplatform.web.dto;
 
+import ru.mifi.ormplatform.domain.enums.QuestionType;
 import java.util.List;
 
 /**
- * Представление вопроса квиза для REST-слоя.
+ * Представление вопроса квиза для REST.
  */
 public class QuestionDto {
 
     private Long id;
     private String text;
-    private String type;
+
+    /**
+     * Тип вопроса — enum (SINGLE_CHOICE, MULTIPLE_CHOICE, TEXT)
+     */
+    private QuestionType type;
 
     private List<AnswerOptionDto> options;
 
@@ -32,11 +37,11 @@ public class QuestionDto {
         this.text = text;
     }
 
-    public String getType() {
+    public QuestionType getType() {
         return type;
     }
 
-    public void setType(String type) {
+    public void setType(QuestionType type) {
         this.type = type;
     }
 

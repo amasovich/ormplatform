@@ -10,25 +10,24 @@ import ru.mifi.ormplatform.web.dto.CourseSummaryDto;
 import ru.mifi.ormplatform.web.dto.LessonDto;
 import ru.mifi.ormplatform.web.dto.ModuleDto;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * Маппер между JPA-сущностями курса и DTO.
- * Здесь я явно контролирую, какие данные уходят наружу в REST-слой.
+ * Маппер между сущностями курса и DTO.
+ * Управляет тем, какие данные видит REST-клиент.
  */
 @Component
 public class CourseMapper {
 
     /**
-     * Преобразую сущность курса в краткий DTO для списков.
-     *
-     * @param course исходная JPA-сущность.
-     * @return DTO для списка курсов.
+     * Преобразование сущности Course → краткое DTO.
      */
     public CourseSummaryDto toSummaryDto(Course course) {
         CourseSummaryDto dto = new CourseSummaryDto();
+
         dto.setId(course.getId());
         dto.setTitle(course.getTitle());
         dto.setDescription(course.getDescription());
@@ -43,24 +42,23 @@ public class CourseMapper {
             dto.setTeacherName(course.getTeacher().getName());
         }
 
-        List<String> tagNames = course.getTags()
-                .stream()
-                .filter(Objects::nonNull)
-                .map(Tag::getName)
-                .collect(Collectors.toList());
-        dto.setTags(tagNames);
+        dto.setTags(
+                course.getTags() == null ? Collections.emptyList() :
+                        course.getTags().stream()
+                                .filter(Objects::nonNull)
+                                .map(Tag::getName)
+                                .collect(Collectors.toList())
+        );
 
         return dto;
     }
 
     /**
-     * Преобразую сущность курса в подробный DTO со структурой модулей и уроков.
-     *
-     * @param course исходная JPA-сущность.
-     * @return DTO для подробного просмотра курса.
+     * Преобразование сущности Course → детальное DTO со структурой модулей и уроков.
      */
     public CourseDetailsDto toDetailsDto(Course course) {
         CourseDetailsDto dto = new CourseDetailsDto();
+
         dto.setId(course.getId());
         dto.setTitle(course.getTitle());
         dto.setDescription(course.getDescription());
@@ -75,48 +73,58 @@ public class CourseMapper {
             dto.setTeacherName(course.getTeacher().getName());
         }
 
-        List<String> tagNames = course.getTags()
-                .stream()
-                .filter(Objects::nonNull)
-                .map(Tag::getName)
-                .collect(Collectors.toList());
-        dto.setTags(tagNames);
+        dto.setTags(
+                course.getTags() == null ? Collections.emptyList() :
+                        course.getTags().stream()
+                                .filter(Objects::nonNull)
+                                .map(Tag::getName)
+                                .collect(Collectors.toList())
+        );
 
-        List<ModuleDto> moduleDtos = course.getModules()
-                .stream()
-                .map(this::toModuleDto)
-                .sorted((a, b) -> Integer.compare(
-                        a.getOrderIndex() != null ? a.getOrderIndex() : 0,
-                        b.getOrderIndex() != null ? b.getOrderIndex() : 0))
-                .collect(Collectors.toList());
-        dto.setModules(moduleDtos);
+        dto.setModules(
+                course.getModules() == null ? Collections.emptyList() :
+                        course.getModules().stream()
+                                .map(this::toModuleDto)
+                                .sorted((a, b) -> Integer.compare(
+                                        a.getOrderIndex() == null ? 0 : a.getOrderIndex(),
+                                        b.getOrderIndex() == null ? 0 : b.getOrderIndex()))
+                                .collect(Collectors.toList())
+        );
 
         return dto;
     }
 
-    private ModuleDto toModuleDto(Module module) {
+    /**
+     * Преобразование Module → ModuleDto
+     */
+    public ModuleDto toModuleDto(Module module) {
         ModuleDto dto = new ModuleDto();
         dto.setId(module.getId());
         dto.setTitle(module.getTitle());
-        dto.setOrderIndex(module.getOrderIndex());
         dto.setDescription(module.getDescription());
+        dto.setOrderIndex(module.getOrderIndex());
 
-        List<LessonDto> lessonDtos = module.getLessons()
-                .stream()
-                .map(this::toLessonDto)
-                .collect(Collectors.toList());
-        dto.setLessons(lessonDtos);
+        dto.setLessons(
+                module.getLessons() == null ? Collections.emptyList() :
+                        module.getLessons().stream()
+                                .map(this::toLessonDto)
+                                .collect(Collectors.toList())
+        );
 
         return dto;
     }
 
-    private LessonDto toLessonDto(Lesson lesson) {
+    /**
+     * Преобразование Lesson → LessonDto
+     */
+    public LessonDto toLessonDto(Lesson lesson) {
         LessonDto dto = new LessonDto();
+
         dto.setId(lesson.getId());
         dto.setTitle(lesson.getTitle());
         dto.setContent(lesson.getContent());
         dto.setVideoUrl(lesson.getVideoUrl());
+
         return dto;
     }
 }
-

@@ -15,10 +15,21 @@ public interface QuestionService {
                             String text,
                             QuestionType type);
 
+    Question updateQuestion(Long questionId,
+                            String newText,
+                            QuestionType newType);
+
+    void deleteQuestion(Long questionId);
+
     AnswerOption addAnswerOption(Long questionId,
                                  String text,
                                  boolean isCorrect);
 
+    AnswerOption updateAnswerOption(Long optionId,
+                                    String text,
+                                    boolean isCorrect);
+
+    void deleteAnswerOption(Long optionId);
+
     List<Question> findByQuiz(Long quizId);
 }
-
