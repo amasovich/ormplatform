@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.web.controller;
 
+import jakarta.validation.Valid;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.mifi.ormplatform.domain.entity.Profile;
@@ -7,9 +9,6 @@ import ru.mifi.ormplatform.service.ProfileService;
 import ru.mifi.ormplatform.web.dto.ProfileDto;
 import ru.mifi.ormplatform.web.dto.ProfileUpdateRequestDto;
 import ru.mifi.ormplatform.web.mapper.ProfileMapper;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * REST-контроллер для просмотра и обновления профиля пользователя.
@@ -35,9 +34,13 @@ public class ProfileController {
      */
     @GetMapping("/{userId}")
     public ResponseEntity<ProfileDto> getProfile(@PathVariable Long userId) {
-        return ResponseEntity.ok(
-                profileMapper.toDto(profileService.getByUserId(userId))
-        );
+
+        Profile profile = profileService.getByUserId(userId);
+        if (profile == null) {
+            throw new EntityNotFoundException("Profile not found for userId=" + userId);
+        }
+
+        return ResponseEntity.ok(profileMapper.toDto(profile));
     }
 
     /**
@@ -50,16 +53,14 @@ public class ProfileController {
     @PutMapping("/{userId}")
     public ResponseEntity<ProfileDto> updateProfile(
             @PathVariable Long userId,
-            @RequestBody ProfileUpdateRequestDto request
+            @Valid @RequestBody ProfileUpdateRequestDto request
     ) {
-        return ResponseEntity.ok(
-                profileMapper.toDto(
-                        profileService.updateProfile(
-                                userId,
-                                request.getBio(),
-                                request.getAvatarUrl()
-                        )
-                )
+        Profile updated = profileService.updateProfile(
+                userId,
+                request.getBio(),
+                request.getAvatarUrl()
         );
+
+        return ResponseEntity.ok(profileMapper.toDto(updated));
     }
 }

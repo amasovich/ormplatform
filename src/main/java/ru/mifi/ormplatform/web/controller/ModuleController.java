@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.web.controller;
 
+import jakarta.validation.Valid;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.mifi.ormplatform.domain.entity.Module;
@@ -9,6 +11,7 @@ import ru.mifi.ormplatform.web.dto.ModuleDto;
 import ru.mifi.ormplatform.web.dto.ModuleUpdateRequestDto;
 import ru.mifi.ormplatform.web.mapper.ModuleMapper;
 
+import java.net.URI;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,7 +38,11 @@ public class ModuleController {
     @PostMapping("/courses/{courseId}/modules")
     public ResponseEntity<ModuleDto> createModule(
             @PathVariable Long courseId,
-            @RequestBody ModuleCreateRequestDto request) {
+            @Valid @RequestBody ModuleCreateRequestDto request) {
+
+        if (request.getTitle() == null || request.getTitle().isBlank()) {
+            throw new IllegalArgumentException("Module title cannot be empty");
+        }
 
         Module module = moduleService.createModule(
                 courseId,
@@ -44,7 +51,9 @@ public class ModuleController {
                 request.getDescription()
         );
 
-        return ResponseEntity.ok(moduleMapper.toDto(module));
+        return ResponseEntity
+                .created(URI.create("/api/modules/" + module.getId()))
+                .body(moduleMapper.toDto(module));
     }
 
     /**
@@ -53,8 +62,10 @@ public class ModuleController {
      */
     @GetMapping("/modules/{id}")
     public ResponseEntity<ModuleDto> getModule(@PathVariable Long id) {
+
         Module module = moduleService.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Модуль не найден: " + id));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Module not found: id=" + id));
 
         return ResponseEntity.ok(moduleMapper.toDto(module));
     }
@@ -65,6 +76,7 @@ public class ModuleController {
      */
     @GetMapping("/courses/{courseId}/modules")
     public ResponseEntity<List<ModuleDto>> getModulesByCourse(@PathVariable Long courseId) {
+
         List<ModuleDto> list = moduleService.findByCourse(courseId)
                 .stream()
                 .map(moduleMapper::toDto)
@@ -80,7 +92,7 @@ public class ModuleController {
     @PutMapping("/modules/{id}")
     public ResponseEntity<ModuleDto> updateModule(
             @PathVariable Long id,
-            @RequestBody ModuleUpdateRequestDto request) {
+            @Valid @RequestBody ModuleUpdateRequestDto request) {
 
         Module updated = moduleService.updateModule(
                 id,

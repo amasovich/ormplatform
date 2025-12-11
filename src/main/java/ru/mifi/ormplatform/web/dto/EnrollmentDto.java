@@ -1,21 +1,29 @@
 package ru.mifi.ormplatform.web.dto;
 
+import ru.mifi.ormplatform.domain.enums.EnrollmentStatus;
+
 import java.time.LocalDate;
 
 /**
  * DTO для представления записи студента на курс.
+ * Это DTO-ответ, поэтому аннотации валидации не используются.
  */
 public class EnrollmentDto {
 
     private Long id;
+
     private Long courseId;
     private String courseTitle;
+
     private Long studentId;
     private String studentName;
-    private String status;
+
+    private EnrollmentStatus status;
+
     private LocalDate enrollDate;
 
     public EnrollmentDto() {
+        // Пустой конструктор нужен Jackson
     }
 
     public Long getId() {
@@ -58,12 +66,12 @@ public class EnrollmentDto {
         this.studentName = studentName;
     }
 
-    public String getStatus() {
+    public EnrollmentStatus getStatus() {
         return status;
     }
 
     public void setStatus(String status) {
-        this.status = status;
+        this.status = EnrollmentStatus.valueOf(status);
     }
 
     public LocalDate getEnrollDate() {
@@ -74,4 +82,3 @@ public class EnrollmentDto {
         this.enrollDate = enrollDate;
     }
 }
-

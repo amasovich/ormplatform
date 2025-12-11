@@ -2,7 +2,9 @@ package ru.mifi.ormplatform.web.dto;
 
 /**
  * Краткое представление квиза.
- * Используется для списков по курсу/модулю.
+ * Используется для списков квизов по курсу или модулю.
+ *
+ * Это DTO-ответ, поэтому валидация не применяется.
  */
 public class QuizSummaryDto {
 
@@ -20,6 +22,7 @@ public class QuizSummaryDto {
     private Integer maxScore;
 
     public QuizSummaryDto() {
+        // Пустой конструктор необходим для Jackson
     }
 
     public Long getId() {

@@ -4,20 +4,34 @@ import java.time.LocalDateTime;
 
 /**
  * DTO для отображения отправленного решения по заданию.
- * <p>
- * Здесь я показываю, кто что сдал, когда, на какое задание,
- * а также оценку и комментарий ментора (если они уже выставлены).
+ *
+ * Содержит:
+ *  - информацию о студенте,
+ *  - информацию о задании,
+ *  - дату отправки,
+ *  - результат проверки (оценку и комментарий).
+ *
+ * Используется только для чтения (response).
  */
 public class SubmissionDto {
 
     private Long id;
+
     private Long assignmentId;
     private String assignmentTitle;
+
     private Long studentId;
     private String studentName;
+
     private LocalDateTime submittedAt;
+
+    /** Сдаваемый текст/ссылка */
     private String content;
+
+    /** Может быть null, если преподаватель ещё не проверил */
     private Integer score;
+
+    /** Комментарий ментора */
     private String feedback;
 
     public SubmissionDto() {

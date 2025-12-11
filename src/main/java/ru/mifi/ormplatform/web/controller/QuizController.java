@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.web.controller;
 
+import jakarta.validation.Valid;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.mifi.ormplatform.domain.entity.AnswerOption;
@@ -12,6 +14,7 @@ import ru.mifi.ormplatform.service.QuizSubmissionService;
 import ru.mifi.ormplatform.web.dto.*;
 import ru.mifi.ormplatform.web.mapper.QuizMapper;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -44,10 +47,6 @@ public class QuizController {
         this.quizMapper = quizMapper;
     }
 
-    // -----------------------------------------------------------------------
-    //                               QUIZ CRUD
-    // -----------------------------------------------------------------------
-
     /**
      * Создаю новый квиз внутри курса и модуля.
      *
@@ -57,8 +56,12 @@ public class QuizController {
     public ResponseEntity<QuizDto> createQuiz(
             @PathVariable Long courseId,
             @PathVariable Long moduleId,
-            @RequestBody QuizCreateRequestDto request
+            @Valid @RequestBody QuizCreateRequestDto request
     ) {
+
+        if (request.getTitle() == null || request.getTitle().isBlank()) {
+            throw new IllegalArgumentException("Quiz title cannot be empty");
+        }
 
         Quiz quiz = quizService.createQuiz(
                 courseId,
@@ -67,7 +70,9 @@ public class QuizController {
                 request.getTimeLimit()
         );
 
-        return ResponseEntity.ok(quizMapper.toQuizDto(quiz));
+        return ResponseEntity
+                .created(URI.create("/api/quizzes/" + quiz.getId()))
+                .body(quizMapper.toQuizDto(quiz));
     }
 
     /**
@@ -78,9 +83,15 @@ public class QuizController {
     @PutMapping("/quizzes/{id}")
     public ResponseEntity<QuizDto> updateQuiz(
             @PathVariable Long id,
-            @RequestBody QuizUpdateRequestDto request
+            @Valid @RequestBody QuizUpdateRequestDto request
     ) {
-        Quiz quiz = quizService.updateQuiz(id, request.getTitle(), request.getTimeLimit());
+
+        Quiz quiz = quizService.updateQuiz(
+                id,
+                request.getTitle(),
+                request.getTimeLimit()
+        );
+
         return ResponseEntity.ok(quizMapper.toQuizDto(quiz));
     }
 
@@ -103,9 +114,8 @@ public class QuizController {
     @GetMapping("/courses/{courseId}/quizzes")
     public ResponseEntity<List<QuizSummaryDto>> getQuizzesByCourse(@PathVariable Long courseId) {
 
-        List<Quiz> quizzes = quizService.findByCourse(courseId);
-
-        List<QuizSummaryDto> dto = quizzes.stream()
+        List<QuizSummaryDto> dto = quizService.findByCourse(courseId)
+                .stream()
                 .map(quizMapper::toQuizSummaryDto)
                 .collect(Collectors.toList());
 
@@ -119,15 +129,13 @@ public class QuizController {
      */
     @GetMapping("/quizzes/{quizId}")
     public ResponseEntity<QuizDto> getQuiz(@PathVariable Long quizId) {
+
         Quiz quiz = quizService.findById(quizId)
-                .orElseThrow(() -> new IllegalArgumentException("Квиз не найден: " + quizId));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Quiz not found: id=" + quizId));
 
         return ResponseEntity.ok(quizMapper.toQuizDto(quiz));
     }
-
-    // -----------------------------------------------------------------------
-    //            QUESTIONS — создание / удаление / добавление вариантов
-    // -----------------------------------------------------------------------
 
     /**
      * Добавляю вопрос в квиз.
@@ -137,8 +145,12 @@ public class QuizController {
     @PostMapping("/quizzes/{quizId}/questions")
     public ResponseEntity<QuestionDto> addQuestion(
             @PathVariable Long quizId,
-            @RequestBody QuestionCreateRequestDto request
+            @Valid @RequestBody QuestionCreateRequestDto request
     ) {
+
+        if (request.getText() == null || request.getText().isBlank()) {
+            throw new IllegalArgumentException("Question text cannot be empty");
+        }
 
         Question question = questionService.createQuestion(
                 quizId,
@@ -160,10 +172,6 @@ public class QuizController {
         return ResponseEntity.noContent().build();
     }
 
-    // -----------------------------------------------------------------------
-    //                       ANSWER OPTIONS — CRUD
-    // -----------------------------------------------------------------------
-
     /**
      * Добавляю вариант ответа к вопросу.
      *
@@ -172,8 +180,12 @@ public class QuizController {
     @PostMapping("/questions/{questionId}/options")
     public ResponseEntity<AnswerOptionDto> addAnswerOption(
             @PathVariable Long questionId,
-            @RequestBody AnswerOptionCreateRequestDto request
+            @Valid @RequestBody AnswerOptionCreateRequestDto request
     ) {
+
+        if (request.getText() == null || request.getText().isBlank()) {
+            throw new IllegalArgumentException("Option text cannot be empty");
+        }
 
         AnswerOption option = questionService.addAnswerOption(
                 questionId,
@@ -195,10 +207,6 @@ public class QuizController {
         return ResponseEntity.noContent().build();
     }
 
-    // -----------------------------------------------------------------------
-    //                        SUBMISSIONS (прохождение квиза)
-    // -----------------------------------------------------------------------
-
     /**
      * Студент отправляет ответы на квиз.
      * Подсчёт результата вынесен в сервис.
@@ -208,8 +216,16 @@ public class QuizController {
     @PostMapping("/quizzes/{quizId}/submissions")
     public ResponseEntity<QuizSubmissionDto> submitQuiz(
             @PathVariable Long quizId,
-            @RequestBody QuizSubmissionRequestDto request
+            @Valid @RequestBody QuizSubmissionRequestDto request
     ) {
+
+        if (request.getStudentId() == null) {
+            throw new IllegalArgumentException("studentId is required");
+        }
+        if (request.getAnswers() == null || request.getAnswers().isEmpty()) {
+            throw new IllegalArgumentException("answers list cannot be empty");
+        }
+
         QuizSubmission submission = quizSubmissionService.evaluateAndSaveSubmission(
                 quizId,
                 request.getStudentId(),
@@ -229,9 +245,8 @@ public class QuizController {
     public ResponseEntity<List<QuizSubmissionDto>> getSubmissionsByQuiz(
             @PathVariable Long quizId) {
 
-        List<QuizSubmission> submissions = quizSubmissionService.findByQuiz(quizId);
-
-        List<QuizSubmissionDto> dto = submissions.stream()
+        List<QuizSubmissionDto> dto = quizSubmissionService.findByQuiz(quizId)
+                .stream()
                 .map(quizMapper::toQuizSubmissionDto)
                 .collect(Collectors.toList());
 
@@ -247,9 +262,8 @@ public class QuizController {
     public ResponseEntity<List<QuizSubmissionDto>> getSubmissionsByStudent(
             @PathVariable Long studentId) {
 
-        List<QuizSubmission> submissions = quizSubmissionService.findByStudent(studentId);
-
-        List<QuizSubmissionDto> dto = submissions.stream()
+        List<QuizSubmissionDto> dto = quizSubmissionService.findByStudent(studentId)
+                .stream()
                 .map(quizMapper::toQuizSubmissionDto)
                 .collect(Collectors.toList());
 

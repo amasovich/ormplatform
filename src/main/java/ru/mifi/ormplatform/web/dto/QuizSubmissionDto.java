@@ -4,21 +4,33 @@ import java.time.LocalDateTime;
 
 /**
  * DTO результата прохождения квиза студентом.
+ * Этот объект отдаётся наружу — поэтому валидации здесь нет.
  */
 public class QuizSubmissionDto {
 
+    /** Уникальный идентификатор попытки. */
     private Long id;
 
+    /** ID связанного квиза. */
     private Long quizId;
+
+    /** Название квиза (для удобства фронтенда). */
     private String quizTitle;
 
+    /** ID студента, который прошёл квиз. */
     private Long studentId;
+
+    /** Имя студента (чтобы не делать повторный запрос на фронте). */
     private String studentName;
 
+    /** Набранный балл. Может быть null, если квиз ещё не проверен вручную. */
     private Integer score;
+
+    /** Дата и время прохождения. */
     private LocalDateTime takenAt;
 
     public QuizSubmissionDto() {
+        // Пустой конструктор необходим для Jackson
     }
 
     public Long getId() {

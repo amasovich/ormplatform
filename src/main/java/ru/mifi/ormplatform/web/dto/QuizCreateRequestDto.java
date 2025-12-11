@@ -1,24 +1,33 @@
 package ru.mifi.ormplatform.web.dto;
 
+import jakarta.validation.constraints.*;
+
 /**
  * DTO-запрос для создания нового квиза.
- * <p>
- * Используется в POST /api/courses/{courseId}/modules/{moduleId}/quizzes
+ *
+ * Используется в:
+ * POST /api/courses/{courseId}/modules/{moduleId}/quizzes
  */
 public class QuizCreateRequestDto {
 
     /**
      * Название квиза.
+     * Обязательно и должно быть не пустым.
      */
+    @NotBlank(message = "Название квиза обязательно")
+    @Size(max = 255, message = "Название квиза должно быть не длиннее 255 символов")
     private String title;
 
     /**
-     * Лимит времени на прохождение квиза (в минутах).
-     * Может быть null — тогда не ограничено.
+     * Лимит времени (в минутах).
+     * Допускается null — тогда квиз без таймера.
+     * Если указано значение, оно должно быть положительным.
      */
+    @Positive(message = "Лимит времени должен быть положительным числом")
     private Integer timeLimit;
 
     public QuizCreateRequestDto() {
+        // Пустой конструктор необходим для Jackson
     }
 
     public String getTitle() {

@@ -1,5 +1,6 @@
 package ru.mifi.ormplatform.web.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.mifi.ormplatform.domain.entity.Submission;
@@ -37,10 +38,6 @@ public class SubmissionController {
         this.submissionMapper = submissionMapper;
     }
 
-    // ========================================================================
-    // 1. СТУДЕНТ СДАЁТ РЕШЕНИЕ
-    // ========================================================================
-
     /**
      * Студент отправляет решение на задание.
      *
@@ -52,7 +49,14 @@ public class SubmissionController {
     @PostMapping("/assignments/{assignmentId}/submissions")
     public ResponseEntity<SubmissionDto> submitAssignment(
             @PathVariable Long assignmentId,
-            @RequestBody SubmissionRequestDto request) {
+            @Valid @RequestBody SubmissionRequestDto request) {
+
+        if (request.getStudentId() == null) {
+            throw new IllegalArgumentException("studentId is required");
+        }
+        if (request.getContent() == null || request.getContent().isBlank()) {
+            throw new IllegalArgumentException("submission content cannot be empty");
+        }
 
         Submission submission = submissionService.submitAssignment(
                 assignmentId,
@@ -65,10 +69,6 @@ public class SubmissionController {
                 URI.create("/api/submissions/" + submission.getId())
         ).body(submissionMapper.toDto(submission));
     }
-
-    // ========================================================================
-    // 2. ВСЕ РЕШЕНИЯ ПО ЗАДАНИЮ
-    // ========================================================================
 
     /**
      * Получаю список всех решений, отправленных на конкретное задание.
@@ -87,10 +87,6 @@ public class SubmissionController {
         return ResponseEntity.ok(result);
     }
 
-    // ========================================================================
-    // 3. ВСЕ РЕШЕНИЯ КОНКРЕТНОГО СТУДЕНТА
-    // ========================================================================
-
     /**
      * Получаю список решений, которые сдал конкретный студент.
      *
@@ -108,10 +104,6 @@ public class SubmissionController {
         return ResponseEntity.ok(result);
     }
 
-    // ========================================================================
-    // 4. ПРЕПОДАВАТЕЛЬ СТАВИТ ОЦЕНКУ
-    // ========================================================================
-
     /**
      * Преподаватель оценивает решение и добавляет комментарий.
      *
@@ -120,7 +112,11 @@ public class SubmissionController {
     @PutMapping("/submissions/{submissionId}/grade")
     public ResponseEntity<SubmissionDto> gradeSubmission(
             @PathVariable Long submissionId,
-            @RequestBody SubmissionGradeDto request) {
+            @Valid @RequestBody SubmissionGradeDto request) {
+
+        if (request.getScore() == null) {
+            throw new IllegalArgumentException("score is required");
+        }
 
         Submission updated = submissionService.gradeSubmission(
                 submissionId,

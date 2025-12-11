@@ -26,7 +26,7 @@ public interface CourseService {
                         String description,
                         Long categoryId,
                         Long teacherId,
-                        String duration,
+                        Integer duration,
                         LocalDate startDate);
 
     /**

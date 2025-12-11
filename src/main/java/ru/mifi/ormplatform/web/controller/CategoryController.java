@@ -1,5 +1,6 @@
 package ru.mifi.ormplatform.web.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.mifi.ormplatform.domain.entity.Category;
@@ -60,12 +61,15 @@ public class CategoryController {
      * @return созданная категория.
      */
     @PostMapping
-    public ResponseEntity<CategoryDto> create(@RequestBody CategoryDto dto) {
+    public ResponseEntity<CategoryDto> create(@Valid @RequestBody CategoryDto dto) {
+
+        if (dto.getName() == null || dto.getName().isBlank()) {
+            throw new IllegalArgumentException("Category name cannot be empty");
+        }
 
         Category category = categoryService.createCategory(dto.getName());
         CategoryDto result = categoryMapper.toDto(category);
 
-        // Возвращаем 201 Created
         return ResponseEntity
                 .created(URI.create("/api/categories/" + result.getId()))
                 .body(result);
@@ -83,7 +87,11 @@ public class CategoryController {
     @PutMapping("/{id}")
     public ResponseEntity<CategoryDto> update(
             @PathVariable Long id,
-            @RequestBody CategoryDto dto) {
+            @Valid @RequestBody CategoryDto dto) {
+
+        if (dto.getName() == null || dto.getName().isBlank()) {
+            throw new IllegalArgumentException("Category name cannot be empty");
+        }
 
         Category updated = categoryService.updateCategory(id, dto.getName());
         return ResponseEntity.ok(categoryMapper.toDto(updated));
@@ -99,7 +107,10 @@ public class CategoryController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
+
+        // В случае отсутствия категории CategoryService обязан выбросить EntityNotFoundException
         categoryService.deleteCategory(id);
+
         return ResponseEntity.noContent().build();
     }
 }

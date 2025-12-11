@@ -44,7 +44,7 @@ public class CourseServiceImpl implements CourseService {
                                String description,
                                Long categoryId,
                                Long teacherId,
-                               String duration,
+                               Integer duration,
                                LocalDate startDate) {
 
         Category category = categoryRepository.findById(categoryId)
@@ -65,6 +65,8 @@ public class CourseServiceImpl implements CourseService {
         course.setDescription(description);
         course.setCategory(category);
         course.setTeacher(teacher);
+
+        // теперь duration — Integer
         course.setDuration(duration);
         course.setStartDate(startDate);
 

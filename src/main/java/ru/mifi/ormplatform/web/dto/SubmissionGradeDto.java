@@ -1,18 +1,33 @@
 package ru.mifi.ormplatform.web.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
+
 /**
- * DTO для оценки решения студентом.
- * <p>
- * Используется преподавателем для выставления оценки и комментария.
+ * DTO для оценки решения студента преподавателем.
+ *
  * Пример запроса:
  * {
  *   "score": 85,
- *   "feedback": "Хорошее решение, но можно улучшить форматирование кода."
+ *   "feedback": "Хорошее решение!"
  * }
  */
 public class SubmissionGradeDto {
 
+    /**
+     * Оценка за решение (0–100).
+     * Может быть null, если преподаватель оставляет только комментарий.
+     */
+    @Min(value = 0, message = "Оценка не может быть меньше 0")
+    @Max(value = 100, message = "Оценка не может быть больше 100")
     private Integer score;
+
+    /**
+     * Комментарий преподавателя.
+     * Может быть пустым, но ограничен по длине.
+     */
+    @Size(max = 2000, message = "Комментарий слишком длинный (максимум 2000 символов)")
     private String feedback;
 
     public SubmissionGradeDto() {

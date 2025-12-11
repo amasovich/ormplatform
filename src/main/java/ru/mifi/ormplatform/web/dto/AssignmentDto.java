@@ -1,68 +1,95 @@
 package ru.mifi.ormplatform.web.dto;
 
+import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
 /**
  * DTO для отображения задания по уроку.
- * <p>
- * Здесь я отдаю наружу только ту информацию, которая нужна клиенту:
- * id, к какому уроку относится задание, текст, дедлайн и максимальный балл.
+ *
+ * Передаёт наружу только необходимые поля:
+ *  - id задания
+ *  - id урока
+ *  - заголовок
+ *  - описание
+ *  - дедлайн
+ *  - максимальный балл
+ *
+ * Используется в AssignmentController.
  */
 public class AssignmentDto {
 
+    /** Идентификатор задания */
     private Long id;
+
+    /** Идентификатор урока, к которому относится задание */
     private Long lessonId;
+
+    /** Название задания */
     private String title;
+
+    /** Описание задания */
     private String description;
+
+    /** Дата дедлайна (может быть null) */
     private LocalDate dueDate;
+
+    /** Максимальный балл за выполнение */
     private Integer maxScore;
 
     public AssignmentDto() {
-        // Нужен пустой конструктор для Jackson
+        // Пустой конструктор необходим для Jackson
     }
+
+    // ======================
+    //        GETTERS
+    // ======================
 
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public Long getLessonId() {
         return lessonId;
     }
 
-    public void setLessonId(Long lessonId) {
-        this.lessonId = lessonId;
-    }
-
     public String getTitle() {
         return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
     }
 
     public String getDescription() {
         return description;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
     public LocalDate getDueDate() {
         return dueDate;
     }
 
-    public void setDueDate(LocalDate dueDate) {
-        this.dueDate = dueDate;
-    }
-
     public Integer getMaxScore() {
         return maxScore;
+    }
+
+    // ======================
+    //        SETTERS
+    // ======================
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setLessonId(Long lessonId) {
+        this.lessonId = lessonId;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
     }
 
     public void setMaxScore(Integer maxScore) {

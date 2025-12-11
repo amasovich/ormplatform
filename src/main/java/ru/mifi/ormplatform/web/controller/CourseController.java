@@ -1,5 +1,6 @@
 package ru.mifi.ormplatform.web.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.mifi.ormplatform.domain.entity.Course;
@@ -39,10 +40,6 @@ public class CourseController {
         this.courseMapper = courseMapper;
         this.moduleService = moduleService;
     }
-
-    // ===========================
-    //        ЧТЕНИЕ КУРСОВ
-    // ===========================
 
     /**
      * Получаю список всех курсов.
@@ -121,10 +118,6 @@ public class CourseController {
         return ResponseEntity.ok(result);
     }
 
-    // ===========================
-    //         СОЗДАНИЕ КУРСА
-    // ===========================
-
     /**
      * Создаю новый курс.
      *
@@ -135,7 +128,7 @@ public class CourseController {
      */
     @PostMapping
     public ResponseEntity<CourseDetailsDto> createCourse(
-            @RequestBody CreateCourseRequestDto request) {
+            @Valid @RequestBody CreateCourseRequestDto request) {
 
         Course course = courseService.createCourse(
                 request.getTitle(),
@@ -152,10 +145,6 @@ public class CourseController {
                 .body(dto);
     }
 
-    // ===========================
-    //        ОБНОВЛЕНИЕ КУРСА
-    // ===========================
-
     /**
      * Обновляю существующий курс.
      *
@@ -164,11 +153,10 @@ public class CourseController {
     @PutMapping("/{id}")
     public ResponseEntity<CourseDetailsDto> updateCourse(
             @PathVariable Long id,
-            @RequestBody UpdateCourseRequestDto request) {
+            @Valid @RequestBody UpdateCourseRequestDto request) {
 
         Course course = courseService.getByIdOrThrow(id);
 
-        // Обновляем только изменяемые поля
         course.setTitle(request.getTitle());
         course.setDescription(request.getDescription());
         course.setDuration(request.getDuration());
@@ -178,10 +166,6 @@ public class CourseController {
 
         return ResponseEntity.ok(courseMapper.toDetailsDto(saved));
     }
-
-    // ===========================
-    //         УДАЛЕНИЕ КУРСА
-    // ===========================
 
     /**
      * Удаляю курс.
@@ -193,10 +177,6 @@ public class CourseController {
         courseService.delete(id);
         return ResponseEntity.noContent().build();
     }
-
-    // ===========================
-    //        ДОПОЛНИТЕЛЬНЫЕ ОПЕРАЦИИ
-    // ===========================
 
     /**
      * Получаю модули курса.

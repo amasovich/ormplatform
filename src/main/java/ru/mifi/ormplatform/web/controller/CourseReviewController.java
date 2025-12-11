@@ -1,5 +1,6 @@
 package ru.mifi.ormplatform.web.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.mifi.ormplatform.domain.entity.CourseReview;
@@ -38,10 +39,6 @@ public class CourseReviewController {
         this.reviewMapper = reviewMapper;
     }
 
-    // =====================================================================
-    //                             CREATE REVIEW
-    // =====================================================================
-
     /**
      * Создать отзыв студента о курсе.
      *
@@ -60,7 +57,14 @@ public class CourseReviewController {
     @PostMapping("/courses/{courseId}/reviews")
     public ResponseEntity<CourseReviewDto> createReview(
             @PathVariable Long courseId,
-            @RequestBody CourseReviewCreateDto request) {
+            @Valid @RequestBody CourseReviewCreateDto request) {
+
+        if (request.getStudentId() == null) {
+            throw new IllegalArgumentException("studentId is required");
+        }
+        if (request.getRating() == null) {
+            throw new IllegalArgumentException("rating is required");
+        }
 
         CourseReview review = reviewService.createReview(
                 courseId,
@@ -73,10 +77,6 @@ public class CourseReviewController {
                 URI.create("/api/reviews/" + review.getId())
         ).body(reviewMapper.toDto(review));
     }
-
-    // =====================================================================
-    //                             GET REVIEWS
-    // =====================================================================
 
     /**
      * Получить все отзывы по курсу.
@@ -118,10 +118,6 @@ public class CourseReviewController {
         return ResponseEntity.ok(result);
     }
 
-    // =====================================================================
-    //                             UPDATE REVIEW
-    // =====================================================================
-
     /**
      * Обновить существующий отзыв пользователя.
      *
@@ -134,7 +130,7 @@ public class CourseReviewController {
     @PutMapping("/reviews/{reviewId}")
     public ResponseEntity<CourseReviewDto> updateReview(
             @PathVariable Long reviewId,
-            @RequestBody CourseReviewUpdateDto request) {
+            @Valid @RequestBody CourseReviewUpdateDto request) {
 
         CourseReview updated = reviewService.updateReview(
                 reviewId,
@@ -144,10 +140,6 @@ public class CourseReviewController {
 
         return ResponseEntity.ok(reviewMapper.toDto(updated));
     }
-
-    // =====================================================================
-    //                             DELETE REVIEW
-    // =====================================================================
 
     /**
      * Удалить отзыв.
@@ -159,7 +151,9 @@ public class CourseReviewController {
      */
     @DeleteMapping("/reviews/{reviewId}")
     public ResponseEntity<Void> deleteReview(@PathVariable Long reviewId) {
+
         reviewService.deleteReview(reviewId);
+
         return ResponseEntity.noContent().build();
     }
 }

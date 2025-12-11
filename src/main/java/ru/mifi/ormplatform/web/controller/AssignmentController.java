@@ -1,8 +1,8 @@
 package ru.mifi.ormplatform.web.controller;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.mifi.ormplatform.domain.entity.Assignment;
 import ru.mifi.ormplatform.domain.entity.Submission;
 import ru.mifi.ormplatform.service.AssignmentService;
 import ru.mifi.ormplatform.service.SubmissionService;
@@ -44,10 +44,6 @@ public class AssignmentController {
         this.submissionMapper = submissionMapper;
     }
 
-    // =============================
-    //    ЗАДАНИЯ УРОКА
-    // =============================
-
     /**
      * Получить список всех заданий урока.
      *
@@ -65,10 +61,6 @@ public class AssignmentController {
         return ResponseEntity.ok(result);
     }
 
-    // =============================
-    //    СОЗДАНИЕ РЕШЕНИЯ
-    // =============================
-
     /**
      * Студент сдаёт решение задания.
      *
@@ -77,7 +69,14 @@ public class AssignmentController {
     @PostMapping("/assignments/{assignmentId}/submissions")
     public ResponseEntity<SubmissionDto> submitAssignment(
             @PathVariable Long assignmentId,
-            @RequestBody SubmissionRequestDto request) {
+            @Valid @RequestBody SubmissionRequestDto request) {
+
+        if (request.getStudentId() == null) {
+            throw new IllegalArgumentException("studentId is required");
+        }
+        if (request.getContent() == null || request.getContent().isBlank()) {
+            throw new IllegalArgumentException("submission content cannot be empty");
+        }
 
         Submission submission = submissionService.submitAssignment(
                 assignmentId,
@@ -90,10 +89,6 @@ public class AssignmentController {
                 URI.create("/api/submissions/" + submission.getId())
         ).body(submissionMapper.toDto(submission));
     }
-
-    // =============================
-    //    ПОЛУЧЕНИЕ РЕШЕНИЙ
-    // =============================
 
     /**
      * Получить все решения по заданию.
@@ -129,10 +124,6 @@ public class AssignmentController {
         return ResponseEntity.ok(result);
     }
 
-    // =============================
-    //    ОЦЕНКА РЕШЕНИЯ
-    // =============================
-
     /**
      * Преподаватель оценивает отправленное решение.
      *
@@ -141,7 +132,11 @@ public class AssignmentController {
     @PutMapping("/submissions/{submissionId}/grade")
     public ResponseEntity<SubmissionDto> gradeSubmission(
             @PathVariable Long submissionId,
-            @RequestBody SubmissionGradeDto request) {
+            @Valid @RequestBody SubmissionGradeDto request) {
+
+        if (request.getScore() == null) {
+            throw new IllegalArgumentException("score is required");
+        }
 
         Submission updated = submissionService.gradeSubmission(
                 submissionId,

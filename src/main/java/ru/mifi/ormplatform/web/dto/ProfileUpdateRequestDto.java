@@ -1,66 +1,55 @@
 package ru.mifi.ormplatform.web.dto;
 
+import jakarta.validation.constraints.Size;
+
 /**
  * DTO-запрос для обновления профиля пользователя.
+ *
+ * Поддерживает частичное обновление:
+ *  - bio
+ *  - avatarUrl
  */
 public class ProfileUpdateRequestDto {
 
+    /**
+     * URL аватара пользователя.
+     * Может быть null — в этом случае не обновляется.
+     */
+    @Size(max = 255, message = "avatarUrl не должен превышать 255 символов")
     private String avatarUrl;
-    private String bio;
-    private String skills;
 
-    private String socialLinkedIn;
-    private String socialGithub;
-    private String socialTelegram;
+    /**
+     * Короткая биография пользователя.
+     * Может быть null — в этом случае не обновляется.
+     */
+    @Size(max = 500, message = "bio не должен превышать 500 символов")
+    private String bio;
 
     public ProfileUpdateRequestDto() {
+        // Пустой конструктор необходим для Jackson
     }
+
+    // ======================
+    //        GETTERS
+    // ======================
 
     public String getAvatarUrl() {
         return avatarUrl;
-    }
-
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
     }
 
     public String getBio() {
         return bio;
     }
 
+    // ======================
+    //        SETTERS
+    // ======================
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
     public void setBio(String bio) {
         this.bio = bio;
-    }
-
-    public String getSkills() {
-        return skills;
-    }
-
-    public void setSkills(String skills) {
-        this.skills = skills;
-    }
-
-    public String getSocialLinkedIn() {
-        return socialLinkedIn;
-    }
-
-    public void setSocialLinkedIn(String socialLinkedIn) {
-        this.socialLinkedIn = socialLinkedIn;
-    }
-
-    public String getSocialGithub() {
-        return socialGithub;
-    }
-
-    public void setSocialGithub(String socialGithub) {
-        this.socialGithub = socialGithub;
-    }
-
-    public String getSocialTelegram() {
-        return socialTelegram;
-    }
-
-    public void setSocialTelegram(String socialTelegram) {
-        this.socialTelegram = socialTelegram;
     }
 }

@@ -4,24 +4,36 @@ import java.time.LocalDateTime;
 
 /**
  * DTO для отображения отзыва о курсе.
- * Передаётся наружу только безопасная информация:
- * студент, курс, рейтинг и текст отзыва.
+ * Содержит только безопасную и необходимую информацию.
  */
 public class CourseReviewDto {
 
+    /** Идентификатор отзыва */
     private Long id;
+
+    /** Курс, к которому относится отзыв */
     private Long courseId;
     private String courseTitle;
 
+    /** Информация о студенте */
     private Long studentId;
     private String studentName;
 
+    /**
+     * Рейтинг курса (1–5).
+     * Валидация выполняется на уровне входящих DTO (create/update),
+     * здесь отдаётся уже сохранённое значение.
+     */
     private Integer rating;
+
+    /** Текст комментария студента */
     private String comment;
 
+    /** Дата и время создания отзыва */
     private LocalDateTime createdAt;
 
     public CourseReviewDto() {
+        // Пустой конструктор необходим для Jackson
     }
 
     public Long getId() {
@@ -88,4 +100,3 @@ public class CourseReviewDto {
         this.createdAt = createdAt;
     }
 }
-

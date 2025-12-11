@@ -4,21 +4,34 @@ import ru.mifi.ormplatform.domain.enums.QuestionType;
 import java.util.List;
 
 /**
- * Представление вопроса квиза для REST.
+ * DTO для отображения вопроса квиза.
+ * <p>
+ * Используется в:
+ * - получении квиза целиком,
+ * - отображении вопроса вместе с вариантами ответа.
+ * <p>
+ * Все поля предназначены только для чтения клиентом.
  */
 public class QuestionDto {
 
     private Long id;
+
+    /** Текст вопроса. */
     private String text;
 
     /**
-     * Тип вопроса — enum (SINGLE_CHOICE, MULTIPLE_CHOICE, TEXT)
+     * Тип вопроса:
+     * SINGLE_CHOICE — один правильный ответ,
+     * MULTIPLE_CHOICE — несколько правильных,
+     * TEXT — текстовый ввод пользователя.
      */
     private QuestionType type;
 
+    /** Варианты ответа (только для SINGLE/MULTIPLE CHOICE). */
     private List<AnswerOptionDto> options;
 
     public QuestionDto() {
+        // Пустой конструктор необходим для Jackson
     }
 
     public Long getId() {

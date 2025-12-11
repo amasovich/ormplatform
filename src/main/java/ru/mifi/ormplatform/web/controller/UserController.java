@@ -1,5 +1,7 @@
 package ru.mifi.ormplatform.web.controller;
 
+import jakarta.validation.Valid;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.mifi.ormplatform.domain.entity.User;
@@ -9,6 +11,7 @@ import ru.mifi.ormplatform.web.dto.UserCreateRequestDto;
 import ru.mifi.ormplatform.web.dto.UserDto;
 import ru.mifi.ormplatform.web.mapper.UserMapper;
 
+import java.net.URI;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -41,14 +44,19 @@ public class UserController {
      * }
      */
     @PostMapping
-    public ResponseEntity<UserDto> createUser(@RequestBody UserCreateRequestDto request) {
+    public ResponseEntity<UserDto> createUser(
+            @Valid @RequestBody UserCreateRequestDto request) {
+
         User created = userService.createUser(
                 request.getName(),
                 request.getEmail(),
                 request.getRole()
         );
 
-        return ResponseEntity.ok(userMapper.toDto(created));
+        UserDto response = userMapper.toDto(created);
+
+        return ResponseEntity.created(URI.create("/api/users/" + created.getId()))
+                .body(response);
     }
 
     /**
@@ -58,8 +66,10 @@ public class UserController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
+
         User user = userService.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + id));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("User not found: id=" + id));
 
         return ResponseEntity.ok(userMapper.toDto(user));
     }
@@ -71,8 +81,10 @@ public class UserController {
      */
     @GetMapping("/search")
     public ResponseEntity<UserDto> getByEmail(@RequestParam String email) {
+
         User user = userService.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User not found: " + email));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("User not found: email=" + email));
 
         return ResponseEntity.ok(userMapper.toDto(user));
     }
@@ -84,6 +96,7 @@ public class UserController {
      */
     @GetMapping
     public ResponseEntity<List<UserDto>> getAllUsers() {
+
         List<UserDto> result = userService.findAll()
                 .stream()
                 .map(userMapper::toDto)
@@ -99,6 +112,7 @@ public class UserController {
      */
     @GetMapping("/role/{role}")
     public ResponseEntity<List<UserDto>> getUsersByRole(@PathVariable UserRole role) {
+
         List<UserDto> result = userService.findByRole(role)
                 .stream()
                 .map(userMapper::toDto)

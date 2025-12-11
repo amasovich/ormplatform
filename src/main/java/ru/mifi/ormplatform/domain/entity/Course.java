@@ -31,9 +31,9 @@ public class Course {
     @JoinColumn(name = "teacher_id", nullable = false)
     private User teacher;
 
-    /** duration (строка вида "6 недель"). */
+    /** duration (Количество недель). */
     @Column(length = 50)
-    private String duration;
+    private Integer duration;
 
     /** startDate из ER (LocalDate). */
     private LocalDate startDate;
@@ -89,7 +89,7 @@ public class Course {
         return teacher;
     }
 
-    public String getDuration() {
+    public Integer getDuration() {
         return duration;
     }
 
@@ -134,7 +134,7 @@ public class Course {
         this.teacher = teacher;
     }
 
-    public void setDuration(String duration) {
+    public void setDuration(Integer duration) {
         this.duration = duration;
     }
 

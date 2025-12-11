@@ -102,7 +102,7 @@ public class DataInitializer implements CommandLineRunner {
                 "Учебная платформа по ORM и Hibernate на Spring Boot.",
                 category.getId(),
                 teacher.getId(),
-                "6 недель",
+                6,
                 LocalDate.now()
         );
 

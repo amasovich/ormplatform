@@ -1,9 +1,10 @@
 package ru.mifi.ormplatform.web.controller;
 
+import jakarta.validation.Valid;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.mifi.ormplatform.domain.entity.Enrollment;
-import ru.mifi.ormplatform.domain.enums.EnrollmentStatus;
 import ru.mifi.ormplatform.service.EnrollmentService;
 import ru.mifi.ormplatform.web.dto.EnrollmentDto;
 import ru.mifi.ormplatform.web.dto.EnrollmentRequestDto;
@@ -38,10 +39,6 @@ public class EnrollmentController {
         this.enrollmentMapper = enrollmentMapper;
     }
 
-    // ======================================================
-    //                   CREATE
-    // ======================================================
-
     /**
      * Записываю студента на курс.
      *
@@ -50,7 +47,11 @@ public class EnrollmentController {
     @PostMapping("/courses/{courseId}/enrollments")
     public ResponseEntity<EnrollmentDto> enrollStudent(
             @PathVariable Long courseId,
-            @RequestBody EnrollmentRequestDto request) {
+            @Valid @RequestBody EnrollmentRequestDto request) {
+
+        if (request.getStudentId() == null) {
+            throw new IllegalArgumentException("studentId is required");
+        }
 
         Enrollment enrollment = enrollmentService.enrollStudent(
                 courseId,
@@ -62,10 +63,6 @@ public class EnrollmentController {
         ).body(enrollmentMapper.toDto(enrollment));
     }
 
-    // ======================================================
-    //                   READ
-    // ======================================================
-
     /**
      * Получаю запись по идентификатору.
      *
@@ -73,9 +70,11 @@ public class EnrollmentController {
      */
     @GetMapping("/enrollments/{id}")
     public ResponseEntity<EnrollmentDto> getEnrollmentById(@PathVariable Long id) {
+
         Enrollment enrollment = enrollmentService.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Запись enrollment с id=" + id + " не найдена"));
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Enrollment not found: id=" + id));
+
         return ResponseEntity.ok(enrollmentMapper.toDto(enrollment));
     }
 
@@ -113,10 +112,6 @@ public class EnrollmentController {
         return ResponseEntity.ok(result);
     }
 
-    // ======================================================
-    //                   UPDATE (status)
-    // ======================================================
-
     /**
      * Обновляю статус записи студента.
      *
@@ -125,16 +120,19 @@ public class EnrollmentController {
     @PutMapping("/enrollments/{id}/status")
     public ResponseEntity<EnrollmentDto> updateStatus(
             @PathVariable Long id,
-            @RequestBody EnrollmentStatusUpdateDto request) {
+            @Valid @RequestBody EnrollmentStatusUpdateDto request) {
 
-        Enrollment enrollment = enrollmentService.updateStatus(id, request.getStatus());
+        if (request.getStatus() == null) {
+            throw new IllegalArgumentException("status is required");
+        }
+
+        Enrollment enrollment = enrollmentService.updateStatus(
+                id,
+                request.getStatus()
+        );
 
         return ResponseEntity.ok(enrollmentMapper.toDto(enrollment));
     }
-
-    // ======================================================
-    //                   DELETE
-    // ======================================================
 
     /**
      * Удаляю запись (отписываю студента).
@@ -143,7 +141,9 @@ public class EnrollmentController {
      */
     @DeleteMapping("/enrollments/{id}")
     public ResponseEntity<Void> deleteEnrollment(@PathVariable Long id) {
+
         enrollmentService.delete(id);
+
         return ResponseEntity.noContent().build();
     }
 }
