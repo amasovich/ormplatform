@@ -62,9 +62,7 @@ public class Course {
     )
     private Set<Tag> tags = new HashSet<>();
 
-    /** Квизы по курсу (согласно ER курс может иметь несколько квизов). */
-    @OneToMany(mappedBy = "course", fetch = FetchType.LAZY)
-    private List<Quiz> quizzes = new ArrayList<>();
+
 
     public Course() {
     }
@@ -115,9 +113,6 @@ public class Course {
         return tags;
     }
 
-    public List<Quiz> getQuizzes() {
-        return quizzes;
-    }
 
     public void setId(Long id) {
         this.id = id;
@@ -163,8 +158,5 @@ public class Course {
         this.tags = tags;
     }
 
-    public void setQuizzes(List<Quiz> quizzes) {
-        this.quizzes = quizzes;
-    }
 }
 

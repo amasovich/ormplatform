@@ -34,8 +34,8 @@ public class Module {
     @OneToMany(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Lesson> lessons = new ArrayList<>();
 
-    /** Опциональный квиз (QUIZ.module_id). */
-    @OneToOne(mappedBy = "module", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    /** QUIZ.module_id. */
+    @OneToOne(mappedBy = "module", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Quiz quiz;
 
     public Module() {

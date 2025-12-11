@@ -21,11 +21,6 @@ public class Quiz {
     @JoinColumn(name = "module_id", nullable = false, unique = true)
     private Module module;
 
-    /** Доп. связь с курсом (COURSE ||--o{ QUIZ в ER). */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
-
     @Column(nullable = false, length = 200)
     private String title;
 
@@ -54,9 +49,6 @@ public class Quiz {
         return module;
     }
 
-    public Course getCourse() {
-        return course;
-    }
 
     public String getTitle() {
         return title;
@@ -80,10 +72,6 @@ public class Quiz {
 
     public void setModule(Module module) {
         this.module = module;
-    }
-
-    public void setCourse(Course course) {
-        this.course = course;
     }
 
     public void setTitle(String title) {
