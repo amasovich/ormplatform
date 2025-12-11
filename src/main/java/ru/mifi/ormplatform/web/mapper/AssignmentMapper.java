@@ -2,22 +2,20 @@ package ru.mifi.ormplatform.web.mapper;
 
 import org.springframework.stereotype.Component;
 import ru.mifi.ormplatform.domain.entity.Assignment;
-import ru.mifi.ormplatform.domain.entity.Submission;
 import ru.mifi.ormplatform.web.dto.AssignmentDto;
-import ru.mifi.ormplatform.web.dto.SubmissionDto;
 
 /**
- * Маппер между сущностями Assignment / Submission и DTO слоя.
- * Явно контролирует, какие данные выходят наружу.
+ * Маппер сущности Assignment → AssignmentDto.
+ * Содержит только маппинг заданий (Submission вынесен в SubmissionMapper).
  */
 @Component
 public class AssignmentMapper {
 
     /**
-     * Преобразование JPA-сущности Assignment → AssignmentDto.
+     * Преобразование сущности Assignment в DTO.
      *
      * @param assignment сущность задания
-     * @return DTO с безопасным набором полей
+     * @return безопасный DTO
      */
     public AssignmentDto toDto(Assignment assignment) {
         AssignmentDto dto = new AssignmentDto();
@@ -30,36 +28,6 @@ public class AssignmentMapper {
 
         if (assignment.getLesson() != null) {
             dto.setLessonId(assignment.getLesson().getId());
-        }
-
-        return dto;
-    }
-
-    /**
-     * Преобразование JPA-сущности Submission → SubmissionDto.
-     *
-     * @param submission сущность отправленного решения
-     * @return DTO с метаданными отправки и оценки
-     */
-    public SubmissionDto toDto(Submission submission) {
-        SubmissionDto dto = new SubmissionDto();
-
-        dto.setId(submission.getId());
-        dto.setSubmittedAt(submission.getSubmittedAt());
-        dto.setContent(submission.getContent());
-        dto.setScore(submission.getScore());
-        dto.setFeedback(submission.getFeedback());
-
-        // Assignment fields
-        if (submission.getAssignment() != null) {
-            dto.setAssignmentId(submission.getAssignment().getId());
-            dto.setAssignmentTitle(submission.getAssignment().getTitle());
-        }
-
-        // Student fields
-        if (submission.getStudent() != null) {
-            dto.setStudentId(submission.getStudent().getId());
-            dto.setStudentName(submission.getStudent().getName());
         }
 
         return dto;

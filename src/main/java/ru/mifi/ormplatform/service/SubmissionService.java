@@ -37,5 +37,8 @@ public interface SubmissionService {
     List<Submission> findByAssignment(Long assignmentId);
 
     List<Submission> findByStudent(Long studentId);
+
+    void deleteSubmission(Long id);
+
 }
 

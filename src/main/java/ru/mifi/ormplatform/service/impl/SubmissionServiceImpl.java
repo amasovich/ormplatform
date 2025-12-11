@@ -131,4 +131,10 @@ public class SubmissionServiceImpl implements SubmissionService {
     public List<Submission> findByStudent(Long studentId) {
         return submissionRepository.findAllByStudent_Id(studentId);
     }
+
+    @Override
+    public void deleteSubmission(Long id) {
+        submissionRepository.deleteById(id);
+    }
+
 }

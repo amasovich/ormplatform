@@ -2,12 +2,11 @@ package ru.mifi.ormplatform.web.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.mifi.ormplatform.domain.entity.Assignment;
 import ru.mifi.ormplatform.domain.entity.Submission;
-import ru.mifi.ormplatform.service.AssignmentService;
 import ru.mifi.ormplatform.service.SubmissionService;
-import ru.mifi.ormplatform.web.dto.*;
-import ru.mifi.ormplatform.web.mapper.AssignmentMapper;
+import ru.mifi.ormplatform.web.dto.SubmissionDto;
+import ru.mifi.ormplatform.web.dto.SubmissionGradeDto;
+import ru.mifi.ormplatform.web.dto.SubmissionRequestDto;
 import ru.mifi.ormplatform.web.mapper.SubmissionMapper;
 
 import java.net.URI;
@@ -16,63 +15,39 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * REST-контроллер для работы с заданиями и отправленными решениями.
+ * REST-контроллер для работы с отправленными решениями (Submission):
+ * — студент сдаёт задание,
+ * — преподаватель ставит оценку,
+ * — получение всех решений по заданию,
+ * — получение всех решений конкретного студента.
  *
- * Поддерживаемые сценарии:
- * - получение заданий урока;
- * - отправка решения студентом;
- * - получение всех решений задания;
- * - получение всех решений студента;
- * - оценивание преподавателем.
+ * AssignmentController отвечает за задания,
+ * а SubmissionController — за сами отправленные решения.
  */
 @RestController
 @RequestMapping("/api")
-public class AssignmentController {
+public class SubmissionController {
 
-    private final AssignmentService assignmentService;
     private final SubmissionService submissionService;
-    private final AssignmentMapper assignmentMapper;
     private final SubmissionMapper submissionMapper;
 
-    public AssignmentController(AssignmentService assignmentService,
-                                SubmissionService submissionService,
-                                AssignmentMapper assignmentMapper,
+    public SubmissionController(SubmissionService submissionService,
                                 SubmissionMapper submissionMapper) {
-        this.assignmentService = assignmentService;
         this.submissionService = submissionService;
-        this.assignmentMapper = assignmentMapper;
         this.submissionMapper = submissionMapper;
     }
 
-    // =============================
-    //    ЗАДАНИЯ УРОКА
-    // =============================
+    // ========================================================================
+    // 1. СТУДЕНТ СДАЁТ РЕШЕНИЕ
+    // ========================================================================
 
     /**
-     * Получить список всех заданий урока.
-     *
-     * GET /api/lessons/{lessonId}/assignments
-     */
-    @GetMapping("/lessons/{lessonId}/assignments")
-    public ResponseEntity<List<AssignmentDto>> getAssignmentsByLesson(
-            @PathVariable Long lessonId) {
-
-        List<AssignmentDto> result = assignmentService.findByLesson(lessonId)
-                .stream()
-                .map(assignmentMapper::toDto)
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(result);
-    }
-
-    // =============================
-    //    СОЗДАНИЕ РЕШЕНИЯ
-    // =============================
-
-    /**
-     * Студент сдаёт решение задания.
+     * Студент отправляет решение на задание.
      *
      * POST /api/assignments/{assignmentId}/submissions
+     *
+     * @param assignmentId ID задания
+     * @param request тело запроса: studentId + content
      */
     @PostMapping("/assignments/{assignmentId}/submissions")
     public ResponseEntity<SubmissionDto> submitAssignment(
@@ -91,12 +66,12 @@ public class AssignmentController {
         ).body(submissionMapper.toDto(submission));
     }
 
-    // =============================
-    //    ПОЛУЧЕНИЕ РЕШЕНИЙ
-    // =============================
+    // ========================================================================
+    // 2. ВСЕ РЕШЕНИЯ ПО ЗАДАНИЮ
+    // ========================================================================
 
     /**
-     * Получить все решения по заданию.
+     * Получаю список всех решений, отправленных на конкретное задание.
      *
      * GET /api/assignments/{assignmentId}/submissions
      */
@@ -112,8 +87,12 @@ public class AssignmentController {
         return ResponseEntity.ok(result);
     }
 
+    // ========================================================================
+    // 3. ВСЕ РЕШЕНИЯ КОНКРЕТНОГО СТУДЕНТА
+    // ========================================================================
+
     /**
-     * Получить все решения студента.
+     * Получаю список решений, которые сдал конкретный студент.
      *
      * GET /api/students/{studentId}/submissions
      */
@@ -129,12 +108,12 @@ public class AssignmentController {
         return ResponseEntity.ok(result);
     }
 
-    // =============================
-    //    ОЦЕНКА РЕШЕНИЯ
-    // =============================
+    // ========================================================================
+    // 4. ПРЕПОДАВАТЕЛЬ СТАВИТ ОЦЕНКУ
+    // ========================================================================
 
     /**
-     * Преподаватель оценивает отправленное решение.
+     * Преподаватель оценивает решение и добавляет комментарий.
      *
      * PUT /api/submissions/{submissionId}/grade
      */
