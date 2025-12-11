@@ -24,4 +24,6 @@ public interface CourseReviewService {
     CourseReview updateReview(Long reviewId,
                               Integer rating,
                               String comment);
+
+    void deleteReview(Long reviewId);
 }

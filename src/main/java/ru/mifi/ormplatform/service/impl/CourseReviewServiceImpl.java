@@ -91,4 +91,14 @@ public class CourseReviewServiceImpl implements CourseReviewService {
 
         return reviewRepository.save(review);
     }
+
+    @Override
+    public void deleteReview(Long reviewId) {
+        CourseReview review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Отзыв с id=" + reviewId + " не найден"));
+
+        reviewRepository.delete(review);
+    }
+
 }
