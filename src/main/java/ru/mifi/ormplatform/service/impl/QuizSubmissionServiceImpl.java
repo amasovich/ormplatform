@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.mifi.ormplatform.domain.entity.Question;
 import ru.mifi.ormplatform.domain.entity.Quiz;
 import ru.mifi.ormplatform.domain.entity.QuizSubmission;
 import ru.mifi.ormplatform.domain.entity.User;
@@ -50,7 +51,7 @@ public class QuizSubmissionServiceImpl implements QuizSubmissionService {
                                            Integer score,
                                            LocalDateTime takenAt) {
 
-        Quiz quiz = quizRepository.findById(quizId)
+        Quiz quiz = quizRepository.findByModule_Id(quizId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "Quiz not found: id=" + quizId));
 
@@ -143,22 +144,20 @@ public class QuizSubmissionServiceImpl implements QuizSubmissionService {
         int score = 0;
 
         // Автоматический подсчёт баллов
-        if (quiz.getQuestions() != null) {
-            for (var question : quiz.getQuestions()) {
+        for (Question question : quiz.getQuestions()) {
 
-                Long selectedOptionId = answers.get(question.getId());
-                if (selectedOptionId == null) {
-                    continue;
-                }
+            Long selectedOptionId = answers.get(question.getId());
+            if (selectedOptionId == null) {
+                continue;
+            }
 
-                boolean correct =
-                        question.getOptions() != null &&
-                                question.getOptions().stream()
-                                        .anyMatch(o -> o.getId().equals(selectedOptionId) && o.isCorrect());
+            boolean correct = question.getOptions()
+                    .stream()
+                    .anyMatch(o ->
+                            o.getId().equals(selectedOptionId) && o.isCorrect());
 
-                if (correct) {
-                    score++;
-                }
+            if (correct) {
+                score++;
             }
         }
 

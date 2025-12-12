@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 
@@ -92,6 +93,26 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT.value(),
                 "STATE_ERROR",
                 ex.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    /**
+     * Ошибки нарушения ограничений целостности БД
+     * (FK, UNIQUE, NOT NULL и т.п.)
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse body = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.CONFLICT.value(),
+                "DATA_INTEGRITY_VIOLATION",
+                "Невозможно выполнить операцию: ресурс используется другими сущностями",
                 request.getRequestURI()
         );
 

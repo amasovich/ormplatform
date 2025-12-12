@@ -1,5 +1,6 @@
 package ru.mifi.ormplatform.repository;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import ru.mifi.ormplatform.domain.entity.Quiz;
 

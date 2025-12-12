@@ -169,14 +169,19 @@ public class DataInitializer implements CommandLineRunner {
 
         // ======================================================
         // 9. QUESTIONS + ANSWERS
-        // ------------------------------------------------------
+        // ======================================================
         Question q1 = questionService.createQuestion(
                 quiz.getId(),
                 "Что делает ORM-фреймворк?",
                 QuestionType.SINGLE_CHOICE
         );
-        questionService.addAnswerOption(q1.getId(),
-                "Автоматизирует маппинг объектов Java и таблиц БД.", true);
+
+        Long q1CorrectOptionId = questionService.addAnswerOption(
+                q1.getId(),
+                "Автоматизирует маппинг объектов Java и таблиц БД.",
+                true
+        ).getId();
+
         questionService.addAnswerOption(q1.getId(),
                 "Компилирует Java-код.", false);
         questionService.addAnswerOption(q1.getId(),
@@ -187,10 +192,16 @@ public class DataInitializer implements CommandLineRunner {
                 "Выберите верные утверждения о JPA",
                 QuestionType.MULTIPLE_CHOICE
         );
+
+        Long q2Option1Id = questionService.addAnswerOption(
+                q2.getId(),
+                "JPA — спецификация ORM в Java.",
+                true
+        ).getId();
+
         questionService.addAnswerOption(q2.getId(),
-                "JPA — спецификация ORM в Java.", true);
-        questionService.addAnswerOption(q2.getId(),
-                "Hibernate — реализация JPA.", true);
+                "Hibernate — реализация JPA.",
+                true);
         questionService.addAnswerOption(q2.getId(),
                 "JPA — драйвер PostgreSQL.", false);
 
@@ -209,8 +220,8 @@ public class DataInitializer implements CommandLineRunner {
                 quiz.getId(),
                 student1.getId(),
                 Map.of(
-                        q1.getId(), q1.getOptions().get(0).getId(),
-                        q2.getId(), q2.getOptions().get(0).getId()
+                        q1.getId(), q1CorrectOptionId,
+                        q2.getId(), q2Option1Id   // допустим, выбрал один из верных
                 ),
                 LocalDateTime.now()
         );

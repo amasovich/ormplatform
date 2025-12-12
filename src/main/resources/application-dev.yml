@@ -1,14 +1,10 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/orm_platform}
-    username: ${DB_USERNAME:orm_user}
-    password: ${DB_PASSWORD:orm_password}
+    url: jdbc:postgresql://localhost:5432/orm_platform
+    username: orm_user
+    password: orm_password
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true

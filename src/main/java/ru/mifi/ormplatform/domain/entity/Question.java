@@ -1,6 +1,8 @@
 package ru.mifi.ormplatform.domain.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 import ru.mifi.ormplatform.domain.enums.QuestionType;
 
 import java.util.ArrayList;
@@ -34,6 +36,7 @@ public class Question {
     private QuestionType type;
 
     /** ANSWEROPTION.question_id. */
+    @Fetch(FetchMode.SUBSELECT)
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<AnswerOption> options = new ArrayList<>();
 

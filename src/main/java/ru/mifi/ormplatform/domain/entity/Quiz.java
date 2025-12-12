@@ -1,6 +1,8 @@
 package ru.mifi.ormplatform.domain.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +31,7 @@ public class Quiz {
     private Integer timeLimit;
 
     /** QUESTION.quiz_id. */
+    @Fetch(FetchMode.SUBSELECT)
     @OneToMany(mappedBy = "quiz", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Question> questions = new ArrayList<>();
 

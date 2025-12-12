@@ -16,14 +16,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * REST-контроллер для работы с отправленными решениями (Submission):
- * — студент сдаёт задание,
- * — преподаватель ставит оценку,
- * — получение всех решений по заданию,
- * — получение всех решений конкретного студента.
+ * REST-контроллер для работы с отправленными решениями (Submission).
  *
- * AssignmentController отвечает за задания,
- * а SubmissionController — за сами отправленные решения.
+ * Поддерживаемые сценарии:
+ * - студент сдаёт задание;
+ * - преподаватель оценивает решение;
+ * - получение всех решений по заданию;
+ * - получение всех решений студента.
  */
 @RestController
 @RequestMapping("/api")
@@ -42,9 +41,6 @@ public class SubmissionController {
      * Студент отправляет решение на задание.
      *
      * POST /api/assignments/{assignmentId}/submissions
-     *
-     * @param assignmentId ID задания
-     * @param request тело запроса: studentId + content
      */
     @PostMapping("/assignments/{assignmentId}/submissions")
     public ResponseEntity<SubmissionDto> submitAssignment(
@@ -71,7 +67,7 @@ public class SubmissionController {
     }
 
     /**
-     * Получаю список всех решений, отправленных на конкретное задание.
+     * Получить все решения по заданию.
      *
      * GET /api/assignments/{assignmentId}/submissions
      */
@@ -88,7 +84,7 @@ public class SubmissionController {
     }
 
     /**
-     * Получаю список решений, которые сдал конкретный студент.
+     * Получить все решения студента.
      *
      * GET /api/students/{studentId}/submissions
      */
@@ -105,7 +101,7 @@ public class SubmissionController {
     }
 
     /**
-     * Преподаватель оценивает решение и добавляет комментарий.
+     * Преподаватель оценивает отправленное решение.
      *
      * PUT /api/submissions/{submissionId}/grade
      */
